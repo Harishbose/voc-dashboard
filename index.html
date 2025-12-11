@@ -1073,16 +1073,18 @@ function renderEverything(){
 
 function downloadFilteredCSV(){
   // convert state.data to CSV
-  if(!state.data.length){ alert('No data to download.'); return; }
-  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
-  const header = cols.join(',');
-  const lines = state.data.map(r => cols.map(c => {
+  if (!state.data.length) { 
+    alert('No data to download.'); 
+    return; 
+}
+const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','comment'];
+const header = cols.join(',');
+const lines = state.data.map(r => cols.map(c => {
     const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g, '""');
-return `"${v}"`;
+    return `"${v}"`;
+}).join(','));
+const csv = [header].concat(lines).join('\n');
 
-  }).join(','));
-  const csv = [header].concat(lines).join('
-');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1269,6 +1271,7 @@ document.getElementById('themeSelect').addEventListener('change', (e)=> setTheme
 </script>
 </body>
 </html>
+
 
 
 
