@@ -1077,8 +1077,9 @@ function downloadFilteredCSV(){
   const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
   const header = cols.join(',');
   const lines = state.data.map(r => cols.map(c => {
-    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
-    return `"${v}"`;
+    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g, '""');
+return `"${v}"`;
+
   }).join(','));
   const csv = [header].concat(lines).join('
 ');
@@ -1268,6 +1269,7 @@ document.getElementById('themeSelect').addEventListener('change', (e)=> setTheme
 </script>
 </body>
 </html>
+
 
 
 
