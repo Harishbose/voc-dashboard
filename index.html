@@ -1,3 +1,5 @@
+
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,8 +9,13 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
+<!-- External libs for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
 :root{
+  /* Default (Light) theme */
   --bg:#e5e7eb;
   --positive:#10b981;
   --negative:#ef4444;
@@ -20,6 +27,40 @@
   --shadow: 0 6px 18px rgba(15,23,42,0.06);
   font-family: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
 }
+
+/* Ocean theme */
+.theme-ocean {
+  --bg: #e8f9ff;
+  --positive:#16a085;
+  --negative:#d64545;
+  --neutral:#f39c12;
+  --blue:#0b6fa4;
+  --card:#ffffff;
+  --muted:#3b4b58;
+}
+
+/* Dark theme */
+.theme-dark {
+  --bg:#0b1220;
+  --positive:#2ecc71;
+  --negative:#e74c3c;
+  --neutral:#f39c12;
+  --blue:#60a5fa;
+  --card:#0f1724;
+  --muted:#94a3b8;
+}
+
+/* Warm theme */
+.theme-warm {
+  --bg:#fff5eb;
+  --positive:#0ea5a1;
+  --negative:#ef4444;
+  --neutral:#f59e0b;
+  --blue:#b45309;
+  --card:#fffdf9;
+  --muted:#6b4f3b;
+}
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -107,6 +148,10 @@ body{
 .label-muted{font-size:12px; color:var(--muted); margin-bottom:6px}
 .search-input{width:100%; padding:8px; border-radius:8px; border:1px solid rgba(2,6,23,0.06); margin-bottom:8px}
 
+/* Modal */
+.modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:9999}
+.modal{background:var(--card); border-radius:10px; padding:16px; width:760px; max-height:80vh; overflow:auto; box-shadow:var(--shadow)}
+
 /* Responsive */
 @media (max-width:1100px){
   .grid, .row-2, .row-3, .row-4 {grid-template-columns:1fr}
@@ -115,7 +160,7 @@ body{
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app" id="appRoot">
   <!-- Filter panel -->
   <aside class="filter-panel" id="filterPanel">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -173,25 +218,40 @@ body{
         </div>
       </div>
 
-      <div class="kpis">
-        <div class="kpi">
-          <div class="label">Total Reviews</div>
-          <div class="value" id="kpiTotal">0</div>
-        </div>
-        <div class="kpi">
-          <div class="label">% Negative Reviews</div>
-          <div style="display:flex; align-items:center; gap:8px">
-            <div class="value" id="kpiNegative">0%</div>
-            <div id="trendIcon" style="font-size:16px;color:var(--negative)">▼</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="kpis">
+          <div class="kpi">
+            <div class="label">Total Reviews</div>
+            <div class="value" id="kpiTotal">0</div>
+          </div>
+          <div class="kpi">
+            <div class="label">% Negative Reviews</div>
+            <div style="display:flex; align-items:center; gap:8px">
+              <div class="value" id="kpiNegative">0%</div>
+              <div id="trendIcon" style="font-size:16px;color:var(--negative)">▼</div>
+            </div>
+          </div>
+          <div class="kpi">
+            <div class="label">Best Rated Store</div>
+            <div class="value" id="kpiBest">—</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Worst Rated Store</div>
+            <div class="value" id="kpiWorst">—</div>
           </div>
         </div>
-        <div class="kpi">
-          <div class="label">Best Rated Store</div>
-          <div class="value" id="kpiBest">—</div>
-        </div>
-        <div class="kpi">
-          <div class="label">Worst Rated Store</div>
-          <div class="value" id="kpiWorst">—</div>
+
+        <!-- New controls -->
+        <div style="display:flex; gap:8px; align-items:center; margin-left:12px">
+          <select id="themeSelect" class="btn small" title="Theme">
+            <option value="">Light</option>
+            <option value="theme-dark">Dark</option>
+            <option value="theme-ocean">Ocean</option>
+            <option value="theme-warm">Warm</option>
+          </select>
+
+          <button id="downloadCsvBtn" class="btn small">Download CSV</button>
+          <button id="exportPdfBtn" class="btn small">Export PDF</button>
         </div>
       </div>
     </div>
@@ -260,6 +320,17 @@ body{
   </main>
 </div>
 
+<!-- Drill-down modal -->
+<div id="modalBackdrop" class="modal-backdrop">
+  <div class="modal" id="drillModal">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 id="modalTitle">Store details</h3>
+      <button class="btn" id="closeModal">Close</button>
+    </div>
+    <div id="modalBody" style="margin-top:12px"></div>
+  </div>
+</div>
+
 <script>
 /* =========================
    Config & API detection
@@ -267,7 +338,6 @@ body{
 
 const API_URLS = [
   "https://voc-dashboard.onrender.com/api/reviews",
-  // fallback to raw GitHub JSON (adjust if repo/branch differ)
   "https://raw.githubusercontent.com/Harishbose/voc-backend/main/reviews.json"
 ];
 
@@ -293,7 +363,7 @@ let state = {
 };
 
 /* =========================
-   Helpers & small NLP
+   Helpers & small NLP (simple heuristics)
    ========================= */
 
 function escapeHtml(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -320,7 +390,7 @@ function classifyImprovementCategory(text){
   if(matches(['return','exchange','refund','policy','returnable'])) return 'Return & Refund Policies';
   if(matches(['support','help','assistance','responsive','query','resolution'])) return 'Customer Support';
   if(matches(['promotion','offer','loyalty','deal','coupon','reward'])) return 'Promotions & Offers';
-  if(matches(['billing','payment','charge','overcharge','invoice','transaction'])) return 'Billing & Payment Issues';
+  if(matches(['billing','payment','charge','invoice','transaction'])) return 'Billing & Payment Issues';
   if(matches(['behaviour','rude','polite','attitude','courtesy','professionalism'])) return 'Staff Behaviour';
   if(matches(['wait','queue','delay','slow','line','turnaround'])) return 'Wait Time / Queue Management';
   return 'Miscellaneous';
@@ -361,61 +431,28 @@ async function loadReviewData(){
    Prepare & map data
    ========================= */
 
-function normalizeRecord(r) {
+function normalizeRecord(r){
   const rec = {};
-
-  // Rating
-  rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating)))
-    ? Number(r.rating)
-    : (r["Google Rating"] ? Number(r["Google Rating"]) : 0);
-
-  // Store fields
-  rec.storeCode = r.storeCode || r["Store Name"] || r["store"] || "";
-  rec.mallType = r.mallType || r["Mall/HS"] || r["mall"] || "";
-  rec.businessName = r.businessName || r["Brand"] || r["brand"] || "";
-  rec.zone = r.zone || r["zone"] || "";
-  rec.state = r.state || r["state"] || "";
-  rec.city = r.city || r["city"] || "";
-
-  // Dates
-  rec.commentDate =
-    r.commentDate ||
-    r["Comment Date"] ||
-    r["Date"] ||
-    "";
-
-  // Month / Quarter / FY
-  rec.month = r.month || r["month"] || "";
-  rec.quarter = r.quarter || r["quarter"] || "";
-  rec.fy = r.fy || r["Financial Year"] || "";
-
-  // Sentiment
-  rec.sentiment = (r.sentiment || r["sentiment"] || "").toString();
-
-  /* -------------------------------------------
-     FIXED COMMENT EXTRACTION ( MAIN PROBLEM )
-     ------------------------------------------- */
-
-  // Always prefer actual review text stored in responseType
-  let commentText =
-    r.responseType ||
-    r["responseType"] ||
-    r["Customer Response"] ||
-    r.comment ||
-    "";
-
-  // If comment accidentally contains a DATE, replace with responseType
-  if (looksLikeDate(String(commentText))) {
-    if (r.responseType && r.responseType.length > 3) {
-      commentText = r.responseType;
-    }
-  }
-
-  rec.comment = commentText || "";
-
+  rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating))) ? Number(r.rating) : (r['Google Rating'] ? Number(r['Google Rating']) : 0);
+  rec.storeCode = r.storeCode || r['storeCode'] || r['Store Name'] || r['store'] || r['storeCode'] || '';
+  rec.mallType = r.mallType || r['mallType'] || r['Mall/HS'] || r['mall'] || '';
+  rec.businessName = r.businessName || r['businessName'] || r['Brand'] || r['brand'] || '';
+  rec.zone = r.zone || r['zone'] || '';
+  rec.state = r.state || r['state'] || '';
+  rec.city = r.city || r['city'] || '';
+  rec.commentDate = r.commentDate || r['commentDate'] || r['Comment Date'] || '';
+  rec.month = (r.month || r['month'] || '').toString().toUpperCase();
+  rec.quarter = r.quarter || r['quarter'] || '';
+  rec.fy = r.fy || r['fy'] || r['Financial Year'] || '';
+  rec.sentiment = (r.sentiment || r['sentiment'] || 'Neutral').toString();
+  let commentText = r.comment || r['comment'] || r['Customer Response'] || r.responseType || r['responseType'] || '';
+  if(looksLikeDate(String(commentText)) && (r.responseType && String(r.responseType).length > 3)) commentText = r.responseType;
+  if(looksLikeDate(String(commentText)) && (r['Customer Response'] && String(r['Customer Response']).length > 3)) commentText = r['Customer Response'];
+  rec.comment = commentText || '';
+  // attach raw fields to allow drill-down fallback (if needed)
+  rec.__raw = r;
   return rec;
 }
-
 
 function refreshDerivedLists(all){
   state.derived.businessNames = uniq(all.map(r=>r.businessName)).filter(x=>x).sort();
@@ -432,7 +469,7 @@ function refreshDerivedLists(all){
 function uniq(arr){ return Array.from(new Set(arr.map(x=>x===null? '': x))).filter(x=>x!=='' ); }
 
 /* =========================
-   Apply filters & cascade
+   Filters & cascade
    ========================= */
 
 function cascadeAllowed(){
@@ -953,7 +990,9 @@ function renderHeatmap(){
   const tbody = document.createElement('tbody');
   topStores.forEach(store=>{
     const tr = document.createElement('tr');
-    const th = document.createElement('th'); th.textContent = store; tr.appendChild(th);
+    const th = document.createElement('th'); th.textContent = store; th.style.cursor='pointer';
+    th.addEventListener('click', ()=> showStoreDrill(store));
+    tr.appendChild(th);
     categories.forEach(cat=>{
       const td = document.createElement('td');
       const stat = storeCat[store] && storeCat[store][cat] ? storeCat[store][cat] : {score:0,count:0};
@@ -985,16 +1024,15 @@ function renderZoneChart(){
   const chart = document.getElementById('zoneChart'); chart.innerHTML='';
   const width = chart.clientWidth || 380; const height = 220; const padding = 30; const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
-  arr.forEach((a,i)=>{ const bw = (width - padding*2) / arr.length; const barH = ((a.avg + 1)/2) * (height - padding*2); const x = padding + i*bw + 6; const y = height - padding - barH; const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',bw-12); rect.setAttribute('height',barH); rect.setAttribute('rx',6); rect.setAttribute('fill', a.avg > 0 ? SENTIMENT_COLORS.Positive : (a.avg < 0 ? SENTIMENT_COLORS.Negative : SENTIMENT_COLORS.Neutral)); svg.appendChild(rect); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + (bw-12)/2); label.setAttribute('y', height - 8); label.setAttribute('font-size','11'); label.setAttribute('text-anchor','middle'); label.textContent = a.z; svg.appendChild(label); const val = document.createElementNS(svgNS,'text'); val.setAttribute('x', x + (bw-12)/2); val.setAttribute('y', y - 6); val.setAttribute('font-size','11'); val.setAttribute('text-anchor','middle'); val.setAttribute('font-weight','700'); val.textContent = a.avg.toFixed(2); svg.appendChild(val); });
+  arr.forEach((a,i)=>{ const bw = (width - padding*2) / Math.max(1,arr.length); const barH = ((a.avg + 1)/2) * (height - padding*2); const x = padding + i*bw + 6; const y = height - padding - barH; const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',Math.max(10,bw-12)); rect.setAttribute('height',barH); rect.setAttribute('rx',6); rect.setAttribute('fill', a.avg > 0 ? SENTIMENT_COLORS.Positive : (a.avg < 0 ? SENTIMENT_COLORS.Negative : SENTIMENT_COLORS.Neutral)); svg.appendChild(rect); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + (Math.max(10,bw-12))/2); label.setAttribute('y', height - 8); label.setAttribute('font-size','11'); label.setAttribute('text-anchor','middle'); label.textContent = a.z; svg.appendChild(label); const val = document.createElementNS(svgNS,'text'); val.setAttribute('x', x + (Math.max(10,bw-12))/2); val.setAttribute('y', y - 6); val.setAttribute('font-size','11'); val.setAttribute('text-anchor','middle'); val.setAttribute('font-weight','700'); val.textContent = a.avg.toFixed(2); svg.appendChild(val); });
   chart.appendChild(svg);
 }
 
 /* Comments */
 function renderComments(){
   const data = state.data.map(r=> ({...r, parsedDate: new Date(r.commentDate)})).sort((a,b)=> b.parsedDate - a.parsedDate);
-  // ensure comment text; if comment looks like date, fallback to responseType
   data.forEach(r=>{
-    if(looksLikeDate(r.comment) && r.responseType && r.responseType.length>3) r.comment = r.responseType;
+    if(looksLikeDate(r.comment) && r.__raw && r.__raw.responseType && r.__raw.responseType.length>3) r.comment = r.__raw.responseType;
   });
 
   const positives = data.filter(r=> r.sentiment==='Positive').slice(0,15);
@@ -1013,7 +1051,6 @@ function renderComments(){
     card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😠</span><b>${escapeHtml(r.comment)}</b></div><div class="comment-meta">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
     negWrap.appendChild(card);
   });
-  // headings color
   const blue = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim();
   document.querySelectorAll('.comment-column h3').forEach(h=> h.style.color = blue);
 }
@@ -1032,7 +1069,151 @@ function renderEverything(){
 }
 
 /* =========================
-   UI button wiring
+   Utility features: CSV download, PDF export, Theme, Drill-down
+   ========================= */
+
+function downloadFilteredCSV(){
+  // convert state.data to CSV
+  if(!state.data.length){ alert('No data to download.'); return; }
+  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
+  const header = cols.join(',');
+  const lines = state.data.map(r => cols.map(c => {
+    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
+    return `"${v}"`;
+  }).join(','));
+  const csv = [header].concat(lines).join('
+');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'voc_filtered.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function exportDashboardPDF(){
+  // capture main content (not the filter panel) to PDF
+  const main = document.querySelector('.main');
+  if(!main) return alert('Main area not found.');
+  const loading = document.createElement('div'); loading.textContent = 'Generating PDF...'; loading.style.position='fixed'; loading.style.right='12px'; loading.style.bottom='12px'; loading.style.background='#111'; loading.style.color='#fff'; loading.style.padding='8px 12px'; loading.style.borderRadius='6px'; document.body.appendChild(loading);
+  try {
+    const canvas = await html2canvas(main, {scale:1.2, useCORS:true, logging:false});
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    // calculate size preserving aspect
+    const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+    const w = canvas.width * ratio;
+    const h = canvas.height * ratio;
+    pdf.addImage(imgData, 'JPEG', (pageWidth - w)/2, 20, w, h);
+    pdf.save('voc-dashboard.pdf');
+  } catch(err){ console.error(err); alert('PDF generation failed: ' + err.message) }
+  loading.remove();
+}
+
+function setTheme(themeClass){
+  const root = document.getElementById('appRoot');
+  root.classList.remove('theme-dark','theme-ocean','theme-warm');
+  if(themeClass) root.classList.add(themeClass);
+}
+
+/* Drill-down: show store modal */
+function showStoreDrill(storeCode){
+  const modal = document.getElementById('modalBackdrop');
+  const body = document.getElementById('modalBody');
+  const title = document.getElementById('modalTitle');
+  title.textContent = `Store: ${storeCode}`;
+  const rows = state.rawData.filter(r=> r.storeCode === storeCode);
+  if(rows.length === 0){
+    body.innerHTML = '<p>No data for this store.</p>';
+  } else {
+    const avgRating = (rows.reduce((s,r)=>s + Number(r.rating||0),0) / rows.length).toFixed(2);
+    const sentiments = {Positive:0,Neutral:0,Negative:0};
+    rows.forEach(r=> sentiments[r.sentiment] = (sentiments[r.sentiment]||0) + 1);
+    const topDrivers = {};
+    rows.forEach(r=> { const cat = classifyImprovementCategory(r.comment); topDrivers[cat] = (topDrivers[cat]||0)+1; });
+    const driverList = Object.entries(topDrivers).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>`${x[0]} (${x[1]})`).join(', ') || 'N/A';
+    // top positive / negative comments
+    const pos = rows.filter(r=> r.sentiment==='Positive').slice(0,5).map(r=>`• ${escapeHtml(r.comment || r.__raw.responseType || '')}`);
+    const neg = rows.filter(r=> r.sentiment==='Negative').slice(0,5).map(r=>`• ${escapeHtml(r.comment || r.__raw.responseType || '')}`);
+    // AI-style summary
+    const aiSummary = generateStoreSummary(storeCode, rows);
+
+    body.innerHTML = `
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <p><b>Average rating:</b> ${avgRating} (${rows.length} reviews)</p>
+          <p><b>Sentiment breakdown:</b> Positive ${sentiments.Positive || 0}, Neutral ${sentiments.Neutral || 0}, Negative ${sentiments.Negative || 0}</p>
+          <p><b>Top drivers:</b> ${driverList}</p>
+          <p style="margin-top:10px"><b>AI-style summary:</b></p>
+          <div style="background:#f7fafc;padding:10px;border-radius:6px">${escapeHtml(aiSummary)}</div>
+        </div>
+        <div style="width:320px">
+          <p style="margin-bottom:6px"><b>Top Positive</b></p>
+          <div style="background:#fff;padding:8px;border-radius:6px;margin-bottom:8px">${pos.join('<br>') || 'N/A'}</div>
+          <p style="margin-bottom:6px"><b>Top Negative</b></p>
+          <div style="background:#fff;padding:8px;border-radius:6px">${neg.join('<br>') || 'N/A'}</div>
+        </div>
+      </div>
+      <div style="margin-top:12px"><button id="modalDownload" class="btn">Download store data CSV</button> <button id="modalCopy" class="btn">Copy summary</button></div>
+    `;
+    document.getElementById('modalDownload').addEventListener('click', ()=> downloadStoreCSV(storeCode));
+    document.getElementById('modalCopy').addEventListener('click', ()=>{
+      navigator.clipboard.writeText(aiSummary).then(()=> alert('Summary copied to clipboard'));
+    });
+  }
+  modal.style.display='flex';
+}
+
+function closeModal(){ document.getElementById('modalBackdrop').style.display='none'; }
+
+function downloadStoreCSV(store){
+  const rows = state.rawData.filter(r=> r.storeCode === store);
+  if(!rows.length) return alert('No data for store.');
+  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
+  const header = cols.join(',');
+  const lines = rows.map(r => cols.map(c => {
+    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
+    return `"${v}"`;
+  }).join(','));
+  const csv = [header].concat(lines).join('
+');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `store_${store}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* AI-style summary (client-side heuristics) */
+function generateStoreSummary(storeCode, rows){
+  // rows: all records for that store
+  const n = rows.length;
+  if(n === 0) return 'No reviews available for this store.';
+  const avg = (rows.reduce((s,r)=>s + Number(r.rating||0),0) / n).toFixed(2);
+  const pos = rows.filter(r=> r.sentiment==='Positive').length;
+  const neg = rows.filter(r=> r.sentiment==='Negative').length;
+  const neut = rows.filter(r=> r.sentiment==='Neutral').length;
+  // top categories
+  const cats = {};
+  rows.forEach(r=> { const c = classifyImprovementCategory(r.comment); cats[c] = (cats[c]||0)+1; });
+  const topCats = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>`${x[0]} (${x[1]})`).join(', ');
+  // sample negative comment if exists
+  const sampleNeg = rows.find(r=> r.sentiment==='Negative' && r.comment && r.comment.length>20);
+  const samplePos = rows.find(r=> r.sentiment==='Positive' && r.comment && r.comment.length>20);
+  let summary = `Store ${storeCode} has ${n} reviews with average rating ${avg}. Sentiment split: Positive ${pos}, Neutral ${neut}, Negative ${neg}. Key themes: ${topCats || 'N/A'}.`;
+  if(sampleNeg) summary += ` Example concern: "${sampleNeg.comment.substring(0,160)}${sampleNeg.comment.length>160?'...':''}"`;
+  else if(samplePos) summary += ` Example compliment: "${samplePos.comment.substring(0,160)}${samplePos.comment.length>160?'...':''}"`;
+  return summary;
+}
+
+/* =========================
+   UI wiring & init
    ========================= */
 document.getElementById('hideFilterBtn').addEventListener('click', ()=>{
   document.getElementById('filterPanel').classList.add('hidden');
@@ -1059,6 +1240,12 @@ document.getElementById('resetFilters').addEventListener('click', ()=>{
   renderEverything();
 });
 document.getElementById('applyFilters').addEventListener('click', ()=>{ renderEverything(); });
+document.getElementById('downloadCsvBtn').addEventListener('click', ()=> downloadFilteredCSV());
+document.getElementById('exportPdfBtn').addEventListener('click', ()=> exportDashboardPDF());
+document.getElementById('closeModal').addEventListener('click', closeModal);
+document.getElementById('modalBackdrop').addEventListener('click', (e)=> { if(e.target.id === 'modalBackdrop') closeModal(); });
+
+document.getElementById('themeSelect').addEventListener('change', (e)=> setTheme(e.target.value));
 
 /* =========================
   Initialization sequence
@@ -1071,11 +1258,9 @@ document.getElementById('applyFilters').addEventListener('click', ()=>{ renderEv
 (async function init(){
   const raw = await loadReviewData();
   state.rawData = raw.map(r=> normalizeRecord(r));
-  // refresh derived lists and select default FY: if 'FY2025-2026' exists keep it, else pick first available
   refreshDerivedLists(state.rawData);
   const defaultFY = state.derived.fys.includes('FY2025-2026') ? 'FY2025-2026' : (state.derived.fys[0] || null);
   if(defaultFY) state.filters.fys.add(defaultFY);
-  // default businessName: first available (if any)
   if(state.derived.businessNames.length) state.filters.businessName = state.derived.businessNames[0];
 
   renderFilterControls();
@@ -1084,4 +1269,5 @@ document.getElementById('applyFilters').addEventListener('click', ()=>{ renderEv
 </script>
 </body>
 </html>
+
 
