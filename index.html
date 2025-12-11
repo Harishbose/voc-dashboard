@@ -361,28 +361,61 @@ async function loadReviewData(){
    Prepare & map data
    ========================= */
 
-function normalizeRecord(r){
-  // ensure consistent field names and fallbacks
+function normalizeRecord(r) {
   const rec = {};
-  rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating))) ? Number(r.rating) : (r['Google Rating'] ? Number(r['Google Rating']) : 0);
-  rec.storeCode = r.storeCode || r['storeCode'] || r['Store Name'] || r['store'] || '';
-  rec.mallType = r.mallType || r['mallType'] || r['Mall/HS'] || r['mall'] || '';
-  rec.businessName = r.businessName || r['businessName'] || r['Brand'] || r['brand'] || '';
-  rec.zone = r.zone || r['zone'] || '';
-  rec.state = r.state || r['state'] || '';
-  rec.city = r.city || r['city'] || '';
-  rec.commentDate = r.commentDate || r['commentDate'] || r['Comment Date'] || '';
-  rec.month = r.month || r['month'] || '';
-  rec.quarter = r.quarter || r['quarter'] || '';
-  rec.fy = r.fy || r['fy'] || r['Financial Year'] || '';
-  rec.sentiment = (r.sentiment || r['sentiment'] || '').toString();
-  // comment text: prefer human text. If comment looks like a date, try responseType or other fields
-  let commentText = r.comment || r['comment'] || r['Customer Response'] || r.responseType || r['responseType'] || '';
-  if(looksLikeDate(String(commentText)) && (r.responseType && String(r.responseType).length > 3)) commentText = r.responseType;
-  if(looksLikeDate(String(commentText)) && (r['Customer Response'] && String(r['Customer Response']).length > 3)) commentText = r['Customer Response'];
-  rec.comment = commentText || '';
+
+  // Rating
+  rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating)))
+    ? Number(r.rating)
+    : (r["Google Rating"] ? Number(r["Google Rating"]) : 0);
+
+  // Store fields
+  rec.storeCode = r.storeCode || r["Store Name"] || r["store"] || "";
+  rec.mallType = r.mallType || r["Mall/HS"] || r["mall"] || "";
+  rec.businessName = r.businessName || r["Brand"] || r["brand"] || "";
+  rec.zone = r.zone || r["zone"] || "";
+  rec.state = r.state || r["state"] || "";
+  rec.city = r.city || r["city"] || "";
+
+  // Dates
+  rec.commentDate =
+    r.commentDate ||
+    r["Comment Date"] ||
+    r["Date"] ||
+    "";
+
+  // Month / Quarter / FY
+  rec.month = r.month || r["month"] || "";
+  rec.quarter = r.quarter || r["quarter"] || "";
+  rec.fy = r.fy || r["Financial Year"] || "";
+
+  // Sentiment
+  rec.sentiment = (r.sentiment || r["sentiment"] || "").toString();
+
+  /* -------------------------------------------
+     FIXED COMMENT EXTRACTION ( MAIN PROBLEM )
+     ------------------------------------------- */
+
+  // Always prefer actual review text stored in responseType
+  let commentText =
+    r.responseType ||
+    r["responseType"] ||
+    r["Customer Response"] ||
+    r.comment ||
+    "";
+
+  // If comment accidentally contains a DATE, replace with responseType
+  if (looksLikeDate(String(commentText))) {
+    if (r.responseType && r.responseType.length > 3) {
+      commentText = r.responseType;
+    }
+  }
+
+  rec.comment = commentText || "";
+
   return rec;
 }
+
 
 function refreshDerivedLists(all){
   state.derived.businessNames = uniq(all.map(r=>r.businessName)).filter(x=>x).sort();
