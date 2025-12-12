@@ -4,267 +4,309 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Voice of Customer — Google Reviews Dashboard</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
 <style>
-:root{
-  --bg:#f3f4f6;
-  --card:#ffffff;
-  --muted:#6b7280;
-  --shadow: 0 6px 18px rgba(15,23,42,0.06);
-  --accent-gold: #b8860b; /* warm gold */
-  --accent-rose: #d48a8a; /* subtle rose if needed */
-  --positive: #10b981;
-  --negative: #ef4444;
-  --neutral: #f59e0b;
-  font-family: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
-  color: #0b1220;
-}
+  :root{
+    --bg:#f3f5f7;            /* light neutral background (original-look) */
+    --positive:#10b981;
+    --negative:#ef4444;
+    --neutral:#f59e0b;
+    --blue:#1e3a8a;
+    --card:#ffffff;
+    --muted:#6b7280;
+    --shadow: 0 8px 30px rgba(15,23,42,0.06);
+    font-family: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
+  }
 
-/* Page */
-html,body{height:100%; margin:0; background:var(--bg); -webkit-font-smoothing:antialiased;}
-.container{max-width:1200px; margin:18px auto; padding:18px; box-sizing:border-box;}
+  /* page constraints to avoid horizontal scroll */
+  html,body{height:100%;margin:0;background:var(--bg);-webkit-font-smoothing:antialiased;}
+  body { padding:18px; box-sizing:border-box; color:#0f172a; }
 
-/* Header */
-.header {
-  display:flex; align-items:center; justify-content:space-between;
-  gap:12px; margin-bottom:14px;
-}
-.brand {
-  flex:1; text-align:center;
-}
-.title { font-weight:700; font-size:22px; margin:2px 0; letter-spacing:0.2px; color:#0b1220; }
-.subtitle { font-size:13px; color:var(--muted); margin-top:4px; }
+  /* center container and prevent overflow-x */
+  .page-wrap { max-width:1200px; margin:0 auto; overflow-x:hidden; }
 
-/* Filter button top-left */
-.left-controls { display:flex; align-items:center; gap:10px; width:220px; }
-.filter-btn {
-  background:var(--card); border-radius:8px; padding:9px 12px; border:1px solid rgba(2,6,23,0.06);
-  cursor:pointer; box-shadow:var(--shadow); display:inline-flex; align-items:center; gap:8px;
-}
-.filter-btn b{font-weight:600; color:#0b1220;}
-.header-accent { height:8px; border-radius:8px; background: linear-gradient(90deg, rgba(184,134,11,0.15), rgba(212,138,138,0.08)); margin-bottom:16px; }
+  /* Top header */
+  .header {
+    text-align:center;
+    padding:18px 12px;
+    position:relative;
+  }
+  .title { font-weight:700; font-size:28px; margin:0; color:#0f172a; }
+  .subtitle { color:var(--muted); margin-top:6px; font-size:13px; }
 
-/* KPI row */
-.kpi-row { display:flex; gap:14px; align-items:center; justify-content:flex-start; margin-bottom:18px; flex-wrap:wrap; }
-.kpi { min-width:220px; background:var(--card); border-radius:12px; padding:18px; box-shadow:var(--shadow); }
-.kpi .label{font-size:14px; color:var(--muted); margin-bottom:8px}
-.kpi .value{font-size:26px; font-weight:700; color:#0b1220}
+  /* Filters button (popout drawer trigger) */
+  .filters-btn {
+    position:fixed;
+    left:18px;
+    top:18px;
+    z-index:1200;
+    background:#fff;
+    border-radius:10px;
+    padding:10px 12px;
+    border:1px solid rgba(2,6,23,0.06);
+    box-shadow:0 6px 18px rgba(15,23,42,0.06);
+    cursor:pointer;
+  }
 
-/* controls right of header (download CSV) */
-.right-controls { display:flex; gap:8px; align-items:center; }
+  /* Drawer */
+  .drawer-backdrop{ position:fixed; inset:0; display:none; z-index:1300; }
+  .drawer { position:fixed; left:0; top:0; height:100%; width:260px; background:#fff; box-shadow: 4px 0 24px rgba(0,0,0,0.08); padding:16px; transform:translateX(-320px); transition:transform .28s ease; overflow:auto; }
+  .drawer.open { transform:translateX(0); }
+  .drawer .close { display:block; margin-left:auto; background:#f1f5f9; border-radius:8px; border:none; padding:6px 8px; cursor:pointer; }
+  .drawer h2{ margin:0 0 8px 0; font-size:16px; color:var(--blue); }
+  .drawer .section { margin-bottom:14px; }
+  .drawer label { display:flex; align-items:center; gap:8px; margin:6px 0; cursor:pointer; font-size:14px; color:#0f172a; }
 
-/* Layout grid */
-.main-grid { display:grid; grid-template-columns: 1fr 360px; gap:16px; align-items:start; }
-.left-col { display:flex; flex-direction:column; gap:16px; }
-.right-col { display:flex; flex-direction:column; gap:16px; }
+  /* KPI row */
+  .kpi-row { display:flex; gap:18px; justify-content:center; align-items:center; margin-top:14px; flex-wrap:wrap; }
+  .kpi { width:230px; background:var(--card); border-radius:12px; padding:18px; box-shadow:var(--shadow); text-align:left; min-height:84px; display:flex; flex-direction:column; justify-content:center; }
+  .kpi .label { color:var(--muted); font-size:13px; margin-bottom:8px; }
+  .kpi .value { font-weight:700; font-size:28px; }
 
-/* Cards */
-.card { background:var(--card); border-radius:12px; padding:16px; box-shadow:var(--shadow); overflow:hidden; }
-.card h3{ margin:0 0 12px 0; font-size:18px; color:#0b1220 }
-.pills {display:flex; gap:8px; flex-wrap:wrap}
+  /* action buttons under KPI row */
+  .actions { display:flex; gap:10px; justify-content:center; margin-top:12px; }
+  .btn { background:#fff; border-radius:999px; padding:8px 12px; border:1px solid rgba(2,6,23,0.06); cursor:pointer; box-shadow:0 6px 18px rgba(15,23,42,0.03); }
+  .btn.secondary { background:var(--card); }
 
-/* Charts placeholders */
-.svg-chart{ width:100%; height:220px }
+  /* grid layout returning to original two-column feel */
+  .grid { display:grid; grid-template-columns: 1fr 420px; gap:16px; margin-top:18px; align-items:start; }
+  @media (max-width:1100px){ .grid{ grid-template-columns: 1fr; } .drawer{width:300px} }
 
-/* Word cloud */
-.word-cloud { min-height:140px; display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; }
+  /* card style */
+  .card { background:var(--card); border-radius:12px; padding:16px; box-shadow:var(--shadow); overflow:hidden; }
+  .card h3 { margin:0 0 12px 0; color:var(--blue); font-size:16px; }
 
-/* Heatmap table */
-.heatmap-wrap{ overflow:auto; border-radius:8px; padding:8px; background:linear-gradient(180deg,#fff,#fbfdff) }
-.heatmap-table{ border-collapse:collapse; width:100% }
-.heatmap-table th, .heatmap-table td{ padding:8px 10px; border:1px solid rgba(2,6,23,0.06); white-space:nowrap; font-size:13px }
-.heatmap-table th{ background:#fff; position:sticky; top:0 }
+  /* pills */
+  .pills { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .pill { background:#f1f5f9; padding:8px 12px; border-radius:999px; font-weight:500; cursor:pointer; }
 
-/* comments */
-.comments-row { display:flex; gap:12px; }
-.comment-column { flex:1; max-height:360px; overflow:auto; }
-.comment-card { background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(2,6,23,0.04) }
+  /* small bar chart container */
+  .drivers-chart { width:100%; min-height:120px; position:relative; }
 
-/* strategic insights grid */
-.insights { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:6px; }
-.insight-card{ border-radius:12px; padding:14px; min-height:120px; box-shadow:var(--shadow); background:#fff; }
+  /* sentiment pie area */
+  .pie-area { display:flex; gap:12px; align-items:center; }
+  .pie { width:180px; height:180px; }
 
-/* drawer (popout left) */
-.drawer-backdrop{ position:fixed; inset:0; display:none; align-items:flex-start; justify-content:flex-start; z-index:9998; }
-.drawer { width:360px; max-width:92vw; height:100vh; background:var(--card); box-shadow: 12px 0 40px rgba(2,6,23,0.15); padding:14px; overflow:auto; border-right:6px solid rgba(184,134,11,0.09); }
-.drawer .close { display:flex; justify-content:flex-end; margin-bottom:8px }
-.collapsible { border-radius:8px; background:#fafafa; padding:8px; margin-bottom:10px; border:1px solid rgba(2,6,23,0.03) }
-.collapsible h4 { margin:0; cursor:pointer; font-size:14px; }
-.collapsible .content { margin-top:8px; max-height:240px; overflow:auto; padding-right:6px; }
+  /* word cloud & linechart */
+  .row-2 { display:grid; grid-template-columns:1fr 380px; gap:16px; margin-top:16px; }
+  @media (max-width:1100px){ .row-2{ grid-template-columns:1fr; } }
 
-/* small helpers & buttons */
-.btn { padding:8px 12px; border-radius:8px; border:1px solid rgba(2,6,23,0.06); background:var(--card); cursor:pointer; }
-.btn.primary { background:var(--accent-gold); color:#fff; border:none; }
-.search-input{ width:100%; padding:8px; border-radius:8px; border:1px solid rgba(2,6,23,0.06) }
+  .word-cloud { min-height:140px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 
-/* responsive */
-@media (max-width:1100px){
-  .main-grid { grid-template-columns: 1fr; }
-  .insights{ grid-template-columns: repeat(2,1fr); }
-  .kpi-row{ justify-content:center; }
-}
+  /* heatmap and zone chart row */
+  .row-3 { display:grid; grid-template-columns: 1fr 420px; gap:16px; margin-top:16px; }
+  @media (max-width:1100px){ .row-3{ grid-template-columns:1fr; } }
+
+  .heatmap-wrap { overflow:auto; border-radius:8px; padding:8px; background:linear-gradient(180deg,#ffffff,#fbfdff); }
+  .heatmap-table{ border-collapse:collapse; width:100%; }
+  .heatmap-table th, .heatmap-table td{ padding:8px 10px; border:1px solid rgba(15,23,42,0.06); white-space:nowrap; }
+
+  /* comments */
+  .comments-row { display:flex; gap:12px; margin-top:16px; }
+  .comment-column{ flex:1; background:var(--card); border-radius:10px; padding:12px; box-shadow:var(--shadow); max-height:360px; overflow:auto; }
+  .comment-card{ background:#f8fafc; border-radius:8px; padding:10px; margin-bottom:8px; border:1px solid rgba(2,6,23,0.04); }
+
+  /* strategic insights grid (six cards) */
+  .insights { margin-top:20px; display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+  @media (max-width:1100px){ .insights { grid-template-columns:1fr; } }
+  .insight-card { background:#fff; border-radius:12px; padding:14px; box-shadow:var(--shadow); min-height:110px; }
+
+  /* utility */
+  .muted { color:var(--muted); font-size:13px; }
+  .bold { font-weight:700; }
+  .center { text-align:center; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
 </style>
 </head>
 <body>
-<div class="container">
+  <button class="filters-btn" id="openFilters">Filters</button>
 
-  <div class="header">
-    <div class="left-controls">
-      <button id="openFilters" class="filter-btn" title="Open Filters">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 5h18M6 12h12M10 19h4" stroke="#0b1220" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <b>Filters</b>
-      </button>
+  <!-- Drawer -->
+  <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-label="Filters">
+    <button class="close" id="closeDrawer">Close</button>
+    <h2>Filters</h2>
+
+    <div class="section">
+      <div class="muted">Business Name (single-select)</div>
+      <div id="businessNameWrap"></div>
     </div>
 
-    <div class="brand">
+    <hr />
+    <div class="section">
+      <div class="muted">Zone</div>
+      <div id="zoneWrap"></div>
+    </div>
+
+    <div class="section">
+      <div class="muted">State</div>
+      <input id="stateSearch" placeholder="Search state..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin:8px 0;">
+      <div id="stateWrap"></div>
+    </div>
+
+    <div class="section">
+      <div class="muted">City</div>
+      <input id="citySearch" placeholder="Search city..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin:8px 0;">
+      <div id="cityWrap"></div>
+    </div>
+
+    <div class="section">
+      <div class="muted">Store</div>
+      <input id="storeSearch" placeholder="Search store..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin:8px 0;">
+      <div id="storeWrap"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn" id="applyFiltersDrawer">Apply</button>
+      <button class="btn" id="resetFiltersDrawer">Reset</button>
+    </div>
+
+  </aside>
+
+  <div class="page-wrap">
+    <header class="header">
+      <div style="height:6px"></div>
       <div class="title">Voice of Customer — Google Reviews</div>
       <div class="subtitle">Interactive Analytics Dashboard</div>
-    </div>
 
-    <div class="right-controls">
-      <button id="downloadCsvBtn" class="btn">Download CSV</button>
-    </div>
-  </div>
-
-  <div class="header-accent" aria-hidden="true"></div>
-
-  <!-- KPIs -->
-  <div class="kpi-row">
-    <div class="kpi">
-      <div class="label">Total Reviews</div>
-      <div class="value" id="kpiTotal">0</div>
-    </div>
-    <div class="kpi">
-      <div class="label">% Negative Reviews</div>
-      <div class="value" id="kpiNegative">0%</div>
-    </div>
-    <div class="kpi">
-      <div class="label">Best Store</div>
-      <div class="value" id="kpiBest">—</div>
-    </div>
-    <div class="kpi">
-      <div class="label">Lowest Rated Store</div>
-      <div class="value" id="kpiWorst">—</div>
-    </div>
-  </div>
-
-  <!-- Strategic Insights heading -->
-  <h3 style="margin:18px 0 8px 0; color:#0b1220">Strategic Insights</h3>
-  <div id="insightsGrid" class="insights"></div>
-
-  <!-- Main content -->
-  <div class="main-grid" style="margin-top:14px;">
-    <div class="left-col">
-      <div class="card">
-        <h3>Key Drivers of Customer Feedback</h3>
-        <div class="pills" id="driverPills"></div>
-        <div id="driversChart" class="svg-chart"></div>
+      <!-- KPI Row -->
+      <div class="kpi-row" style="margin-top:18px;">
+        <div class="kpi">
+          <div class="label">Total Reviews</div>
+          <div class="value" id="kpiTotal">0</div>
+        </div>
+        <div class="kpi">
+          <div class="label">% Negative Reviews</div>
+          <div class="value" id="kpiNegative">0%</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Best Store</div>
+          <div class="value" id="kpiBest">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Worst Store</div>
+          <div class="value" id="kpiWorst">—</div>
+        </div>
       </div>
 
+      <div class="actions" style="margin-bottom:6px;">
+        <button class="btn" id="downloadCsvBtn">Download CSV</button>
+        <button class="btn" id="resetFiltersBtn">Reset Filters</button>
+      </div>
+    </header>
+
+    <!-- Strategic insights -->
+    <div style="margin-top:6px;">
+      <h3 style="margin:8px 0 14px 0;color:var(--blue)">Strategic Insights</h3>
+      <div class="insights" id="insightsGrid"></div>
+    </div>
+
+    <!-- Row 1 -->
+    <div class="grid">
+      <div class="card">
+        <h3 id="driversTitle">Key Drivers of Customer Feedback (All Sentiments)</h3>
+        <div class="pills" id="driverPills"></div>
+        <div class="drivers-chart" id="driversChart"></div>
+      </div>
+
+      <div class="card">
+        <h3>Sentiment Distribution</h3>
+        <div class="pie-area">
+          <div id="pieChart" class="pie"></div>
+          <div id="pieLegend" style="flex:1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="row-2">
       <div class="card">
         <h3>Emotion Word Cloud</h3>
         <div class="word-cloud" id="wordCloud"></div>
       </div>
 
       <div class="card">
-        <h3>Store Sentiment Heatmap (Top stores × Categories)</h3>
-        <div id="heatmapWrap" class="heatmap-wrap" style="margin-top:8px">
-          <table id="heatmapTable" class="heatmap-table"></table>
+        <h3>Sentiment Trend Over Time (APR → MAR)</h3>
+        <div id="lineChart" style="height:220px;"></div>
+      </div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="row-3">
+      <div class="card">
+        <h3>Store Sentiment Heatmap (Top 10 stores × Categories)</h3>
+        <div class="heatmap-wrap" id="heatmapWrap" style="margin-top:8px">
+          <table class="heatmap-table" id="heatmapTable"></table>
         </div>
       </div>
 
       <div class="card">
-        <h3>Positive Comments (Top 15) — By Date</h3>
-        <div id="positiveComments" class="comment-column"></div>
-      </div>
-    </div>
-
-    <div class="right-col">
-      <div class="card">
-        <h3>Sentiment Distribution</h3>
-        <div id="pieChart" style="width:100%;height:220px;display:flex;align-items:center;justify-content:center"></div>
-        <div id="pieLegend" style="margin-top:12px"></div>
-      </div>
-
-      <div class="card">
-        <h3>Sentiment Trend Over Time (APR → MAR)</h3>
-        <div id="lineChart" class="svg-chart"></div>
-      </div>
-
-      <div class="card">
         <h3>Sentiment by Zone</h3>
-        <div id="zoneChart" class="svg-chart"></div>
-      </div>
-
-      <div class="card">
-        <h3>Negative Comments (Top 15) — By Date</h3>
-        <div id="negativeComments" class="comment-column"></div>
+        <div id="zoneChart" class="svg-chart" style="height:220px"></div>
       </div>
     </div>
+
+    <!-- Comments row -->
+    <div class="comments-row">
+      <div class="comment-column">
+        <h3 style="color:var(--blue); margin-bottom:10px">Positive Comments (Top 15) – By Date</h3>
+        <div id="positiveComments"></div>
+      </div>
+
+      <div class="comment-column">
+        <h3 style="color:var(--blue); margin-bottom:10px">Negative Comments (Top 15) – By Date</h3>
+        <div id="negativeComments"></div>
+      </div>
+    </div>
+
+    <div style="height:32px"></div>
   </div>
-</div>
-
-<!-- Drawer -->
-<div id="drawerBackdrop" class="drawer-backdrop">
-  <div class="drawer" role="dialog" aria-modal="true" aria-label="Filters drawer">
-    <div class="close"><button id="closeDrawer" class="btn">Close</button></div>
-
-    <div class="collapsible">
-      <h4 data-toggle="business">Business Name</h4>
-      <div class="content" id="businessNameWrap"></div>
-    </div>
-
-    <div class="collapsible">
-      <h4 data-toggle="zone">Zone</h4>
-      <div class="content" id="zoneWrap"></div>
-    </div>
-
-    <div class="collapsible">
-      <h4 data-toggle="state">State</h4>
-      <div class="content">
-        <input id="stateSearch" class="search-input" placeholder="Search state..." />
-        <div id="stateWrap" style="margin-top:8px"></div>
-      </div>
-    </div>
-
-    <div class="collapsible">
-      <h4 data-toggle="city">City</h4>
-      <div class="content">
-        <input id="citySearch" class="search-input" placeholder="Search city..." />
-        <div id="cityWrap" style="margin-top:8px"></div>
-      </div>
-    </div>
-
-    <div class="collapsible">
-      <h4 data-toggle="store">Store</h4>
-      <div class="content">
-        <input id="storeSearch" class="search-input" placeholder="Search store..." />
-        <div id="storeWrap" style="margin-top:8px"></div>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button id="applyFilters" class="btn primary">Apply Filters</button>
-      <button id="resetFilters" class="btn">Reset</button>
-    </div>
-  </div>
-</div>
 
 <script>
-/* ------------- Config ------------- */
-const API_URLS = ["https://raw.githubusercontent.com/Harishbose/voc-dashboard/main/reviews.json"];
+/* =========================
+   Config
+   ========================= */
+const API_URLS = [
+  "https://raw.githubusercontent.com/Harishbose/voc-dashboard/main/reviews.json"
+];
+
 const MONTH_ORDER = ['APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC','JAN','FEB','MAR'];
-const SENTIMENT_COLORS = { Positive: '#10b981', Negative: '#ef4444', Neutral: '#f59e0b' };
+const COLORS = { Positive: getComputedStyle(document.documentElement).getPropertyValue('--positive').trim() || '#10b981', Negative: getComputedStyle(document.documentElement).getPropertyValue('--negative').trim() || '#ef4444', Neutral: getComputedStyle(document.documentElement).getPropertyValue('--neutral').trim() || '#f59e0b'};
 
 let state = {
-  rawData: [], data: [],
-  filters: { businessName:null, zones:new Set(), states:new Set(), cities:new Set(), stores:new Set() },
+  rawData: [],
+  data: [],
+  filters: {
+    businessName: null,
+    zones: new Set(),
+    states: new Set(),
+    cities: new Set(),
+    stores: new Set()
+  },
   derived: {}
 };
 
-/* ------------- Helpers ------------- */
+/* =========================
+   Helpers
+   ========================= */
 function escapeHtml(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function looksLikeDate(s){ if(!s) return false; return /^\d{4}-\d{2}-\d{2}/.test(s) || /^\d{2}\/\d{2}\/\d{4}/.test(s); }
+function formatDateYMD(dateStr){ if(!dateStr) return 'N/A'; const d = new Date(dateStr); if(isNaN(d)) return dateStr; const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); const yy = String(d.getFullYear()); return mm + '/' + dd + '/' + yy; }
 function sentimentScore(sent){ if(sent==='Positive') return 1; if(sent==='Negative') return -1; return 0; }
+
+function detectEmotions(text){
+  if(!text) return [];
+  const t = text.toLowerCase();
+  const em=[];
+  if(/thank|thanks|gratef|appreciat|love|😊/.test(t)) em.push('Gratitude');
+  if(/angry|hate|annoy|furious|😠|mad|rage|terrible|awful|worst/.test(t)) em.push('Frustration');
+  if(/happy|great|excellent|pleased|satisfied/.test(t)) em.push('Satisfaction');
+  if(/disappointed|sad|upset|not happy|disappoint/.test(t)) em.push('Disappointment');
+  if(/confused|unclear|unsure/.test(t)) em.push('Confusion');
+  return em;
+}
 function classifyImprovementCategory(text){
   if(!text) return 'Miscellaneous';
   const t = text.toLowerCase();
@@ -282,64 +324,59 @@ function classifyImprovementCategory(text){
   return 'Miscellaneous';
 }
 
-/* Normalize */
-function normalizeRecord(r){
-  const rec = {};
-  rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating))) ? Number(r.rating) : 0;
-  rec.storeCode = r.storeCode || r['storeCode'] || r['Store Name'] || r['store'] || '';
-  rec.mallType = r.mallType || r['mallType'] || '';
-  rec.businessName = r.businessName || r['Brand'] || '';
-  rec.zone = r.zone || '';
-  rec.state = r.state || '';
-  rec.city = r.city || '';
-  rec.commentDate = r.commentDate || r['commentDate'] || '';
-  rec.month = (r.month || r['month'] || '').toString().toUpperCase();
-  rec.quarter = r.quarter || '';
-  rec.fy = r.fy || '';
-  rec.sentiment = (r.sentiment || 'Neutral').toString();
-  let commentText = r.comment || r['comment'] || r.responseType || r['Customer Response'] || '';
-  rec.comment = commentText || '';
-  rec.__raw = r;
-  return rec;
-}
-
-/* Fetch */
+/* =========================
+   Load data
+   ========================= */
 async function loadReviewData(){
   for(const url of API_URLS){
     try {
       const res = await fetch(url);
       if(!res.ok) continue;
       const data = await res.json();
-      if(Array.isArray(data)) return data;
+      if(Array.isArray(data) && data.length>0) return data;
     } catch(e){}
   }
   alert('Could not load data from backend (reviews.json).');
   return [];
 }
 
-/* Derived lists */
+/* normalize */
+function normalizeRecord(r){
+  const rec = {};
+  rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating))) ? Number(r.rating) : 0;
+  rec.storeCode = r.storeCode || r['storeCode'] || r['Store Name'] || r['store'] || '';
+  rec.mallType = r.mallType || r['mallType'] || '';
+  rec.businessName = r.businessName || r['businessName'] || r['Brand'] || '';
+  rec.zone = r.zone || '';
+  rec.state = r.state || '';
+  rec.city = r.city || '';
+  rec.commentDate = r.commentDate || r['commentDate'] || '';
+  rec.month = (r.month || r['month'] || '').toString().toUpperCase();
+  rec.quarter = r.quarter || r['quarter'] || '';
+  rec.fy = r.fy || r['fy'] || '';
+  rec.sentiment = (r.sentiment || r['sentiment'] || 'Neutral').toString();
+  let commentText = r.comment || r['comment'] || r['Customer Response'] || r.responseType || r['responseType'] || '';
+  if(looksLikeDate(String(commentText)) && (r.responseType && String(r.responseType).length > 3)) commentText = r.responseType;
+  if(looksLikeDate(String(commentText)) && (r['Customer Response'] && String(r['Customer Response']).length > 3)) commentText = r['Customer Response'];
+  rec.comment = commentText || '';
+  rec.__raw = r;
+  return rec;
+}
+
+/* build derived lists */
 function refreshDerivedLists(all){
-  state.derived.businessNames = uniq(all.map(r=>r.businessName));
-  state.derived.zones = uniq(all.map(r=>r.zone));
-  state.derived.states = uniq(all.map(r=>r.state));
-  state.derived.cities = uniq(all.map(r=>r.city));
-  state.derived.stores = uniq(all.map(r=>r.storeCode));
+  state.derived.businessNames = uniq(all.map(r=>r.businessName)).filter(x=>x).sort();
+  state.derived.zones = uniq(all.map(r=>r.zone)).filter(x=>x).sort();
+  state.derived.states = uniq(all.map(r=>r.state)).filter(x=>x).sort();
+  state.derived.cities = uniq(all.map(r=>r.city)).filter(x=>x).sort();
+  state.derived.stores = uniq(all.map(r=>r.storeCode)).filter(x=>x).sort();
+  state.derived.months = uniq(all.map(r=>r.month)).filter(x=>x).sort((a,b)=> MONTH_ORDER.indexOf(a)-MONTH_ORDER.indexOf(b));
 }
-function uniq(arr){ return Array.from(new Set(arr.filter(x=>x && x!==null))).sort(); }
+function uniq(arr){ return Array.from(new Set(arr.map(x=>x===null? '': x))).filter(x=>x!=='' ); }
 
-/* Cascade allowed - not strictly necessary but we'll use allowed lists */
-function cascadeAllowed(){
-  const base=state.rawData; const f=state.filters;
-  const allowedStates=new Set(), allowedCities=new Set(), allowedStores=new Set();
-  base.forEach(r=> { if(f.zones.size===0 || f.zones.has(r.zone)) allowedStates.add(r.state); });
-  base.forEach(r=> { if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state))) allowedCities.add(r.city); });
-  base.forEach(r=> { if((f.zones.size===0||f.zones.has(r.zone)) && (f.states.size===0||f.states.has(r.state)) && (f.cities.size===0||f.cities.has(r.city))) allowedStores.add(r.storeCode); });
-  state.derived.allowedStates = Array.from(allowedStates).sort();
-  state.derived.allowedCities = Array.from(allowedCities).sort();
-  state.derived.allowedStores = Array.from(allowedStores).sort();
-}
-
-/* Apply filters */
+/* =========================
+   Filters & apply
+   ========================= */
 function applyFilters(){
   const f = state.filters;
   let data = state.rawData.slice();
@@ -351,180 +388,157 @@ function applyFilters(){
   state.data = data;
 }
 
-/* Render filter UI in the drawer */
+/* =========================
+   Render controls
+   ========================= */
 function renderFilterControls(){
-  cascadeAllowed();
-  // business names (radio)
+  // business name radios
   const bwrap = document.getElementById('businessNameWrap'); bwrap.innerHTML='';
   state.derived.businessNames.forEach(name=>{
-    const div = document.createElement('div');
-    const checked = state.filters.businessName === name ? 'checked' : '';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="radio" name="businessName" ${checked} value="${escapeHtml(name)}"> ${escapeHtml(name)}</label>`;
-    bwrap.appendChild(div);
+    const input = document.createElement('input'); input.type='radio'; input.name='businessName'; input.value=name;
+    if(state.filters.businessName === name) input.checked = true;
+    input.addEventListener('change', e=> { state.filters.businessName = e.target.value; });
+    const lbl = document.createElement('label'); lbl.appendChild(input); lbl.appendChild(document.createTextNode(' ' + name));
+    bwrap.appendChild(lbl);
   });
+
   // zones
   const zwrap = document.getElementById('zoneWrap'); zwrap.innerHTML='';
   state.derived.zones.forEach(z=>{
-    const div = document.createElement('div');
-    const checked = state.filters.zones.has(z) ? 'checked' : '';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(z)}" class="zone-checkbox" ${checked}/> ${escapeHtml(z)}</label>`;
-    zwrap.appendChild(div);
+    const cb = document.createElement('input'); cb.type='checkbox';
+    cb.checked = state.filters.zones.has(z);
+    cb.addEventListener('change', e=> { if(e.target.checked) state.filters.zones.add(z); else state.filters.zones.delete(z); });
+    const lbl = document.createElement('label'); lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' ' + z));
+    zwrap.appendChild(lbl);
   });
 
   // states
-  const swrap = document.getElementById('stateWrap'); swrap.innerHTML='';
-  (state.derived.allowedStates || state.derived.states).forEach(s=>{
-    const checked = state.filters.states.has(s) ? 'checked' : '';
-    const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="state-checkbox" ${checked}/> ${escapeHtml(s)}</label>`;
-    swrap.appendChild(div);
+  const sw = document.getElementById('stateWrap'); sw.innerHTML='';
+  state.derived.states.forEach(s=>{
+    const cb = document.createElement('input'); cb.type='checkbox';
+    cb.dataset.val = s;
+    cb.checked = state.filters.states.has(s);
+    cb.addEventListener('change', e=> { if(e.target.checked) state.filters.states.add(s); else state.filters.states.delete(s); });
+    const lbl = document.createElement('label'); lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' ' + s));
+    sw.appendChild(lbl);
   });
 
   // cities
-  const cwrap = document.getElementById('cityWrap'); cwrap.innerHTML='';
-  (state.derived.allowedCities || state.derived.cities).forEach(c=>{
-    const checked = state.filters.cities.has(c) ? 'checked' : '';
-    const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(c)}" class="city-checkbox" ${checked}/> ${escapeHtml(c)}</label>`;
-    cwrap.appendChild(div);
+  const cw = document.getElementById('cityWrap'); cw.innerHTML='';
+  state.derived.cities.forEach(c=>{
+    const cb = document.createElement('input'); cb.type='checkbox';
+    cb.checked = state.filters.cities.has(c);
+    cb.addEventListener('change', e=> { if(e.target.checked) state.filters.cities.add(c); else state.filters.cities.delete(c); });
+    const lbl = document.createElement('label'); lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' ' + c));
+    cw.appendChild(lbl);
   });
 
   // stores
-  const stwrap = document.getElementById('storeWrap'); stwrap.innerHTML='';
-  (state.derived.allowedStores || state.derived.stores).forEach(s=>{
-    const checked = state.filters.stores.has(s) ? 'checked' : '';
-    const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="store-checkbox" ${checked}/> ${escapeHtml(s)}</label>`;
-    stwrap.appendChild(div);
+  const stw = document.getElementById('storeWrap'); stw.innerHTML='';
+  state.derived.stores.forEach(s=>{
+    const cb = document.createElement('input'); cb.type='checkbox';
+    cb.checked = state.filters.stores.has(s);
+    cb.addEventListener('change', e=> { if(e.target.checked) state.filters.stores.add(s); else state.filters.stores.delete(s); });
+    const lbl = document.createElement('label'); lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' ' + s));
+    stw.appendChild(lbl);
   });
 
-  attachFilterListeners();
-}
-
-/* attach filter listeners */
-function attachFilterListeners(){
-  document.querySelectorAll('input[name="businessName"]').forEach(r=>{
-    r.addEventListener('change', e=>{
-      state.filters.businessName = e.target.value;
-    });
-  });
-
-  document.querySelectorAll('.zone-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.zones.add(val); else state.filters.zones.delete(val);
-      renderFilterControls();
-    });
-  });
-  document.querySelectorAll('.state-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.states.add(val); else state.filters.states.delete(val);
-      renderFilterControls();
-    });
-  });
-  document.querySelectorAll('.city-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.cities.add(val); else state.filters.cities.delete(val);
-      renderFilterControls();
-    });
-  });
-  document.querySelectorAll('.store-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.stores.add(val); else state.filters.stores.delete(val);
-      renderFilterControls();
-    });
-  });
-
+  // search boxes
   document.getElementById('stateSearch').addEventListener('input', e=>{
     const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#stateWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+    document.querySelectorAll('#stateWrap label').forEach(l=> l.style.display = l.textContent.toLowerCase().includes(q) ? '' : 'none');
   });
   document.getElementById('citySearch').addEventListener('input', e=>{
     const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#cityWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+    document.querySelectorAll('#cityWrap label').forEach(l=> l.style.display = l.textContent.toLowerCase().includes(q) ? '' : 'none');
   });
-  document.getElementById('storeSearch')?.addEventListener('input', e=>{
+  document.getElementById('storeSearch').addEventListener('input', e=>{
     const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#storeWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+    document.querySelectorAll('#storeWrap label').forEach(l=> l.style.display = l.textContent.toLowerCase().includes(q) ? '' : 'none');
   });
 }
 
-/* KPI and insights */
+/* =========================
+   KPIs & insights
+   ========================= */
 function renderKPIsAndInsights(){
   applyFilters();
-  const data = state.data || [];
-  const total = data.length;
+  const data = state.data;
+  document.getElementById('kpiTotal').textContent = data.length;
+
   const negatives = data.filter(d=>d.sentiment==='Negative').length;
-  const negPct = total ? ((negatives/total)*100).toFixed(1) + '%' : '0%';
-  document.getElementById('kpiTotal').textContent = total;
+  const negPct = data.length ? ((negatives/data.length)*100).toFixed(1) + '%' : '0%';
   document.getElementById('kpiNegative').textContent = negPct;
 
-  // Best/Worst store using weighted score
-  const storeMap = {};
-  state.rawData.forEach(r=>{
-    if(!storeMap[r.storeCode]) storeMap[r.storeCode] = {sum:0,count:0};
-    storeMap[r.storeCode].sum += Number(r.rating||0);
-    storeMap[r.storeCode].count++;
+  // Best/Worst store - use weighted scoring
+  const byStore = {};
+  data.forEach(r=>{
+    if(!byStore[r.storeCode]) byStore[r.storeCode] = {sum:0,count:0};
+    byStore[r.storeCode].sum += Number(r.rating||0);
+    byStore[r.storeCode].count++;
   });
-  const storeScores = Object.entries(storeMap).map(([s,v])=>{
-    const avg = v.count ? (v.sum / v.count) : 0;
+
+  // weighted score = avg_rating * log(1 + count)
+  const storeScores = Object.entries(byStore).map(([k,v])=>{
+    const avg = v.count? v.sum/v.count : 0;
     const weighted = avg * Math.log(1 + v.count);
-    return {store:s, avg, count:v.count, weighted};
-  }).filter(x=>x.store && x.store.trim() !== '');
+    return {store:k,avg, count:v.count, weighted};
+  });
 
-  if(storeScores.length){
-    // choose best by highest weighted, worst by lowest weighted
-    const best = storeScores.slice().sort((a,b)=>b.weighted - a.weighted)[0];
-    const worst = storeScores.slice().sort((a,b)=>a.weighted - b.weighted)[0];
-    document.getElementById('kpiBest').textContent = best ? `${best.store} (${best.avg.toFixed(2)})` : '—';
-    document.getElementById('kpiWorst').textContent = worst ? `${worst.store} (${worst.avg.toFixed(2)})` : '—';
-  } else {
-    document.getElementById('kpiBest').textContent = '—';
-    document.getElementById('kpiWorst').textContent = '—';
-  }
+  const best = storeScores.slice().sort((a,b)=>b.weighted - a.weighted)[0];
+  const worst = storeScores.slice().filter(s=>s.count>0).sort((a,b)=>a.avg - b.avg)[0];
 
-  // Strategic Insights
+  if(best){
+    document.getElementById('kpiBest').textContent = `${best.store} (${best.avg.toFixed(2)} / ${best.count})`;
+  } else document.getElementById('kpiBest').textContent = '—';
+
+  if(worst){
+    document.getElementById('kpiWorst').textContent = `${worst.store} (${worst.avg.toFixed(2)} / ${worst.count})`;
+  } else document.getElementById('kpiWorst').textContent = '—';
+
+  // Strategic insights (6 cards)
   const grid = document.getElementById('insightsGrid'); grid.innerHTML='';
-  const strategic = generateStrategicInsights(state.data);
+
+  const strategic = generateStrategicInsights(data);
   strategic.forEach(s=>{
     const el = document.createElement('div'); el.className='insight-card';
-    el.innerHTML = `<h4 style="margin-top:0">${escapeHtml(s.headline)}</h4><p style="color:var(--muted);">${escapeHtml(s.description)}</p>`;
+    el.innerHTML = `<h4 style="margin:0 0 6px 0">${escapeHtml(s.headline)}</h4><p style="margin:0;color:var(--muted)">${escapeHtml(s.description)}</p>`;
     grid.appendChild(el);
   });
 }
 
-/* Generate strategic insights (heuristic) */
+/* generate strategic insights (6) */
 function generateStrategicInsights(data){
-  data = data || [];
   const categories = {};
-  data.forEach(r=>{ const cat = classifyImprovementCategory(r.comment); if(cat==='Miscellaneous') return; categories[cat] = (categories[cat]||0)+1; });
+  data.forEach(r=>{
+    const cat = classifyImprovementCategory(r.comment);
+    if(cat === 'Miscellaneous') return;
+    categories[cat] = (categories[cat]||0)+1;
+  });
   const total = Object.values(categories).reduce((a,b)=>a+b,0) || 1;
   const sortedCats = Object.entries(categories).map(([k,v])=>({k,v,percent:(v/total*100)})).sort((a,b)=>b.v-a.v);
   const theme = sortedCats[0] ? sortedCats[0].k : 'Store Experience';
   const themePct = sortedCats[0] ? Math.round(sortedCats[0].percent) : 0;
 
-  // zone dip
   const zoneStats = {};
-  data.forEach(r=>{ if(!zoneStats[r.zone]) zoneStats[r.zone] = {sum:0,count:0,neg:0}; zoneStats[r.zone].sum += r.rating; zoneStats[r.zone].count++; if(r.sentiment==='Negative') zoneStats[r.zone].neg++; });
-  const zoneArr = Object.entries(zoneStats).map(([z,v])=>({zone:z,avg:v.count? v.sum/v.count:0, negPct:v.count? (v.neg/v.count*100):0})).sort((a,b)=>b.negPct-a.negPct);
+  data.forEach(r=>{
+    if(!zoneStats[r.zone]) zoneStats[r.zone] = {sum:0,count:0,neg:0};
+    zoneStats[r.zone].sum += r.rating; zoneStats[r.zone].count++;
+    if(r.sentiment === 'Negative') zoneStats[r.zone].neg++;
+  });
+  const zoneArr = Object.entries(zoneStats).map(([z,v])=>({zone:z,avg:v.count? v.sum/v.count:0, negPct:v.count? (v.neg/v.count*100):0})).sort((a,b)=>b.negPct - a.negPct);
   const topZone = zoneArr[0] || {zone:'N/A',avg:0,negPct:0};
 
-  // underperformers by avg <=4
   const storeMap = {};
-  data.forEach(r=>{ if(!storeMap[r.storeCode]) storeMap[r.storeCode] = {sum:0,count:0,neg:0}; storeMap[r.storeCode].sum += r.rating; storeMap[r.storeCode].count++; if(r.sentiment==='Negative') storeMap[r.storeCode].neg++; });
-  const underperformers = Object.entries(storeMap).map(([s,v])=>({s,avg:v.sum/v.count, count:v.count, negPct:v.count? v.neg/v.count*100:0})).filter(x=>x.avg<=4).sort((a,b)=>a.avg-b.avg).slice(0,5).map(x=>x.s);
+  data.forEach(r=>{
+    if(!storeMap[r.storeCode]) storeMap[r.storeCode] = {sum:0,count:0,neg:0};
+    storeMap[r.storeCode].sum += r.rating; storeMap[r.storeCode].count++;
+    if(r.sentiment === 'Negative') storeMap[r.storeCode].neg++;
+  });
+  const underperformers = Object.entries(storeMap).map(([s,v])=>({store:s,avg:v.count? v.sum/v.count:0,negPct:v.count? v.neg/v.count*100:0,count:v.count})).filter(x=>x.avg<=3.6 && x.count>3).slice(0,5).map(x=>x.store);
   const underperformingText = underperformers.length ? underperformers.join(', ') : 'N/A';
 
-  // pos momentum
+  // positive momentum
   function daysAgo(d,n){ const D=new Date(d); D.setDate(D.getDate()-n); return D; }
   const today = new Date();
   const last30 = data.filter(r=> new Date(r.commentDate) >= daysAgo(today,30));
@@ -533,23 +547,30 @@ function generateStrategicInsights(data){
   const posPrev = prev30.filter(r=>r.sentiment==='Positive').length;
   const posPctChange = posPrev ? Math.round(((posLast-posPrev)/posPrev)*100) : (posLast? 100: 0);
 
-  const cityMap = {}; data.forEach(r=> cityMap[r.city] = (cityMap[r.city]||0)+1);
+  const cityMap = {};
+  data.forEach(r=> cityMap[r.city] = (cityMap[r.city]||0)+1);
   const topCities = Object.entries(cityMap).map(([c,v])=>({c,v})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>x.c).join(', ') || 'N/A';
+
+  const best = Object.entries(storeMap).map(([s,v])=>({s,avg:v.count? v.sum/v.count:0})).sort((a,b)=>b.avg-a.avg)[0];
+  const bestText = best ? `${best.s} (${best.avg.toFixed(2)})` : 'N/A';
 
   return [
     {headline:'Store Experience Dominates', description:`This was the most mentioned theme, appearing in ${themePct}% of customer feedback.`},
-    {headline:`${topZone.zone} Zone Sentiment Dip`, description:`Average rating ${topZone.avg.toFixed(1)}, driven by negative in-store experience.`},
-    {headline:'Stores needing Attention', description:`Stores with low average ratings: ${underperformingText}`},
-    {headline:'Uptick in Positive Feedback', description:`Positive reviews changed by ${posPctChange}% in last 30 days.`},
-    {headline:`Top Cities`, description:`High review volumes in ${topCities}.`},
-    {headline:'Best Performing Stores', description:`Best-performing stores identified using weighted score (avg × log(1+count)).`}
+    {headline:`${topZone.zone} Zone Sentiment Dip`, description:`Average rating ${topZone.avg.toFixed(1)}, driven by negative in-store experiences.`},
+    {headline:'Stores needing Urgent Attention', description:`Lowest ratings and consistent negative sentiment: ${underperformingText}`},
+    {headline:'Uptick in Positive Feedback', description:`Positive reviews changed by +${posPctChange}% in the past 30 days.`},
+    {headline:`Top Cities by Volume`, description:`${topCities} saw the highest review volumes.`},
+    {headline:'Leading Store Performance', description:`Top store: ${bestText} — consider as model for scaling excellence.`}
   ];
 }
 
-/* Drivers chart (bar-like) */
+/* =========================
+   Drivers chart small bar
+   ========================= */
 function renderDriversChart(){
+  const data = state.data;
   const categories = {};
-  state.data.forEach(r=>{
+  data.forEach(r=>{
     const cat = classifyImprovementCategory(r.comment);
     if(cat==='Miscellaneous') return;
     categories[cat] = (categories[cat]||0)+1;
@@ -567,39 +588,41 @@ function renderDriversChart(){
   // pills
   const pillWrap = document.getElementById('driverPills'); pillWrap.innerHTML='';
   filtered.forEach(item=>{
-    const pill = document.createElement('div'); pill.style.padding='8px 10px'; pill.style.borderRadius='999px'; pill.style.background='#f1f5f9';
-    pill.style.fontWeight='600'; pill.style.cursor='default'; pill.textContent = `${item.k} (${item.v})`;
+    const pill = document.createElement('div'); pill.className='pill';
+    pill.textContent = `${item.k} (${item.v})`;
+    pill.addEventListener('click', ()=> { /* placeholder for category filter */ });
     pillWrap.appendChild(pill);
   });
 
-  // svg bars
   const chart = document.getElementById('driversChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 760, height = Math.max(80, filtered.length*36);
   const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS,'svg');
-  svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+  const width = chart.clientWidth || 700, height = Math.max(80, filtered.length*36);
+  const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   const max = Math.max(...filtered.map(f=>f.v),1);
   filtered.forEach((f,i)=>{
-    const barW = Math.round((f.v/max) * (width - 200));
-    const y = i*36 + 10;
-    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x',12); label.setAttribute('y',y+16); label.setAttribute('font-size','12'); label.setAttribute('font-weight','700'); label.textContent = f.k;
+    const y = i*32 + 12;
+    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x',10); label.setAttribute('y',y+12); label.setAttribute('font-size','12'); label.setAttribute('font-weight','700'); label.textContent = f.k;
     svg.appendChild(label);
-    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',200); rect.setAttribute('y',y+2); rect.setAttribute('width',barW); rect.setAttribute('height',20); rect.setAttribute('rx',6); rect.setAttribute('fill','#c7e9ff');
-    svg.appendChild(rect);
-    const valText = document.createElementNS(svgNS,'text'); valText.setAttribute('x',200 + barW + 8); valText.setAttribute('y', y+16); valText.setAttribute('font-size','12'); valText.setAttribute('font-weight','700'); valText.textContent = f.v;
-    svg.appendChild(valText);
+    const barW = Math.round((f.v/max) * (width - 240));
+    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',200); rect.setAttribute('y',y+4); rect.setAttribute('width',barW); rect.setAttribute('height',18); rect.setAttribute('rx',8); rect.setAttribute('fill','rgba(16,185,129,0.12)');
+    rect.setAttribute('stroke','rgba(16,185,129,0.22)'); svg.appendChild(rect);
+    const val = document.createElementNS(svgNS,'text'); val.setAttribute('x',200 + barW + 10); val.setAttribute('y', y+16); val.setAttribute('font-size','12'); val.setAttribute('font-weight','700'); val.textContent = f.v;
+    svg.appendChild(val);
   });
   chart.appendChild(svg);
 }
 
-/* Sentiment pie */
+/* =========================
+   Sentiment pie
+   ========================= */
 function renderSentimentPie(){
+  const data = state.data;
   const counts = {Positive:0, Neutral:0, Negative:0};
-  state.data.forEach(d=> { if(d.sentiment in counts) counts[d.sentiment]++; else counts.Neutral++; });
-  const total = Math.max(1, counts.Positive + counts.Neutral + counts.Negative);
+  data.forEach(d=> { if(d.sentiment in counts) counts[d.sentiment]++; else counts.Neutral++; });
+  const total = counts.Positive + counts.Neutral + counts.Negative || 1;
   const pie = document.getElementById('pieChart'); pie.innerHTML='';
-  const size = 180; const svgNS = 'http://www.w3.org/2000/svg'; const cx=size/2, cy=size/2, r=size/2-8;
-  const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width',size); svg.setAttribute('height',size); svg.setAttribute('viewBox',`0 0 ${size} ${size}`);
+  const size=180; const cx=size/2, cy=size/2, r=size/2-8;
+  const svgNS='http://www.w3.org/2000/svg'; const svg=document.createElementNS(svgNS,'svg'); svg.setAttribute('width',size); svg.setAttribute('height',size);
   let start = -Math.PI/2;
   Object.entries(counts).forEach(([k,v])=>{
     const slice = (v/total)*(Math.PI*2);
@@ -607,66 +630,61 @@ function renderSentimentPie(){
     const x1 = cx + r*Math.cos(start), y1 = cy + r*Math.sin(start);
     const x2 = cx + r*Math.cos(end), y2 = cy + r*Math.sin(end);
     const large = slice > Math.PI ? 1 : 0;
-    const path = document.createElementNS(svgNS,'path');
     const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-    path.setAttribute('d', d); path.setAttribute('fill', SENTIMENT_COLORS[k]);
+    const path = document.createElementNS(svgNS,'path'); path.setAttribute('d',d); path.setAttribute('fill', COLORS[k]);
     svg.appendChild(path);
     start = end;
   });
   pie.appendChild(svg);
 
-  // legend
   const legend = document.getElementById('pieLegend'); legend.innerHTML='';
   Object.entries(counts).forEach(([k,v])=>{
-    const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.marginBottom='6px';
-    const sw = document.createElement('div'); sw.style.width='12px'; sw.style.height='12px'; sw.style.borderRadius='4px'; sw.style.background=SENTIMENT_COLORS[k];
+    const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.marginBottom='8px';
+    const sw = document.createElement('div'); sw.style.width='12px'; sw.style.height='12px'; sw.style.borderRadius='4px'; sw.style.background=COLORS[k];
     const label = document.createElement('div'); label.style.fontWeight='700'; label.textContent = `${k} — ${(v/total*100).toFixed(1)}% (${v})`;
     row.appendChild(sw); row.appendChild(label); legend.appendChild(row);
   });
 }
 
-/* Word cloud */
+/* =========================
+   Word cloud
+   ========================= */
 function renderWordCloud(){
+  const data = state.data;
   const emotionCounts = {};
-  state.data.forEach(r=>{
-    // simple heuristics from response text
-    const t = (r.comment || '').toLowerCase();
-    if(/thank|thanks|gratef|appreciat|love/.test(t)) emotionCounts['Gratitude'] = (emotionCounts['Gratitude']||0)+1;
-    if(/angry|hate|annoy|furious|mad|terrible|awful|worst/.test(t)) emotionCounts['Frustration'] = (emotionCounts['Frustration']||0)+1;
-    if(/happy|great|excellent|pleased|satisfied/.test(t)) emotionCounts['Satisfaction'] = (emotionCounts['Satisfaction']||0)+1;
-    if(/disappointed|sad|upset|not happy|disappoint/.test(t)) emotionCounts['Disappointment'] = (emotionCounts['Disappointment']||0)+1;
-    if(/confused|unclear|unsure/.test(t)) emotionCounts['Confusion'] = (emotionCounts['Confusion']||0)+1;
-  });
+  data.forEach(r=> detectEmotions(r.comment).forEach(e => emotionCounts[e] = (emotionCounts[e]||0)+1));
   const wc = document.getElementById('wordCloud'); wc.innerHTML='';
   const total = Object.values(emotionCounts).reduce((a,b)=>a+b,0) || 1;
   Object.entries(emotionCounts).sort((a,b)=>b[1]-a[1]).forEach(([word,count])=>{
     const el = document.createElement('div'); const size = 12 + Math.round((count/total)*22);
-    el.style.fontSize = size + 'px'; el.style.background='#e6ffef'; el.style.padding='6px 10px'; el.style.borderRadius='18px';
-    el.textContent = `${word} (${count})`.substring(0,30);
+    el.style.fontSize = size + 'px'; el.style.background='#e6fff4'; el.style.padding='8px 10px'; el.style.borderRadius='12px'; el.textContent = `${word} (${count})`;
     wc.appendChild(el);
   });
 }
 
-/* Line chart */
+/* =========================
+   Line chart (simple SVG)
+   ========================= */
 function renderLineChart(){
   const map = {}; MONTH_ORDER.forEach(m=> map[m] = {sum:0,count:0});
   state.data.forEach(r=> { if(map[r.month]){ map[r.month].sum += sentimentScore(r.sentiment); map[r.month].count++; } });
   const points = MONTH_ORDER.map(m=> map[m].count ? map[m].sum/map[m].count : 0);
-  const chart = document.getElementById('lineChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 380, height = 220, padding = 40;
-  const svgNS = 'http://www.w3.org/2000/svg'; const svg = document.createElementNS(svgNS,'svg');
-  svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+  const container = document.getElementById('lineChart'); container.innerHTML='';
+  const width = container.clientWidth || 700, height = 220, padding = 40;
+  const svgNS='http://www.w3.org/2000/svg'; const svg=document.createElementNS(svgNS,'svg'); svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   const yScale = v => padding + ( (1 - (v+1)/2) * (height - padding*2));
   const xScale = i => padding + i * ((width - padding*2) / (MONTH_ORDER.length-1));
   for(let i=0;i<=4;i++){ const y = padding + i*((height - padding*2)/4); const line = document.createElementNS(svgNS,'line'); line.setAttribute('x1',padding); line.setAttribute('x2',width-padding); line.setAttribute('y1',y); line.setAttribute('y2',y); line.setAttribute('stroke','rgba(2,6,23,0.04)'); svg.appendChild(line); }
-  MONTH_ORDER.forEach((m,i)=>{ const tx = document.createElementNS(svgNS,'text'); tx.setAttribute('x', xScale(i)); tx.setAttribute('y', height - 8); tx.setAttribute('font-size','10'); tx.setAttribute('text-anchor','middle'); tx.textContent = m; svg.appendChild(tx); });
+  MONTH_ORDER.forEach((m,i)=>{ const tx = document.createElementNS(svgNS,'text'); tx.setAttribute('x', xScale(i)); tx.setAttribute('y', height - 8); tx.setAttribute('font-size','11'); tx.setAttribute('text-anchor','middle'); tx.textContent = m; svg.appendChild(tx); });
   const pathD = points.map((p,i)=> `${i===0?'M':'L'} ${xScale(i)} ${yScale(p)}`).join(' ');
-  const path = document.createElementNS(svgNS,'path'); path.setAttribute('d', pathD); path.setAttribute('fill','none'); path.setAttribute('stroke','#0b1220'); path.setAttribute('stroke-width','2'); svg.appendChild(path);
-  points.forEach((p,i)=>{ const cx = xScale(i), cy = yScale(p); const circle = document.createElementNS(svgNS,'circle'); circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',4); circle.setAttribute('fill','#fff'); circle.setAttribute('stroke','#0b1220'); circle.setAttribute('stroke-width',2); svg.appendChild(circle); });
-  chart.appendChild(svg);
+  const path = document.createElementNS(svgNS,'path'); path.setAttribute('d', pathD); path.setAttribute('fill','none'); path.setAttribute('stroke','#0f172a'); path.setAttribute('stroke-width','2'); svg.appendChild(path);
+  points.forEach((p,i)=>{ const cx = xScale(i), cy = yScale(p); const circle = document.createElementNS(svgNS,'circle'); circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',4); circle.setAttribute('fill','#fff'); circle.setAttribute('stroke','#0f172a'); circle.setAttribute('stroke-width',2); svg.appendChild(circle); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', cx); label.setAttribute('y', cy - 8); label.setAttribute('font-size','11'); label.setAttribute('text-anchor','middle'); label.setAttribute('font-weight','700'); label.textContent = (p).toFixed(2); svg.appendChild(label); });
+  container.appendChild(svg);
 }
 
-/* Heatmap */
+/* =========================
+   Heatmap
+   ========================= */
 function renderHeatmap(){
   const storeCat = {};
   state.rawData.forEach(r=>{
@@ -677,14 +695,17 @@ function renderHeatmap(){
     storeCat[r.storeCode][cat].score += sentimentScore(r.sentiment);
     storeCat[r.storeCode][cat].count++;
   });
+
   const storeCounts = {};
   state.rawData.forEach(r=> storeCounts[r.storeCode] = (storeCounts[r.storeCode]||0)+1);
   const topStores = Object.entries(storeCounts).map(([s,c])=>({s,c})).sort((a,b)=>b.c-a.c).slice(0,10).map(x=>x.s);
   const categories = uniq([].concat(...Object.values(storeCat).map(s=>Object.keys(s))));
+
   const table = document.getElementById('heatmapTable'); table.innerHTML='';
   const thead = document.createElement('thead'); const trh = document.createElement('tr'); const th0 = document.createElement('th'); th0.textContent='Store / Category'; trh.appendChild(th0);
   categories.forEach(cat=>{ const th = document.createElement('th'); th.textContent = cat; trh.appendChild(th); });
   thead.appendChild(trh); table.appendChild(thead);
+
   const tbody = document.createElement('tbody');
   topStores.forEach(store=>{
     const tr = document.createElement('tr');
@@ -696,7 +717,7 @@ function renderHeatmap(){
       const avg = stat.count ? stat.score / stat.count : 0;
       const display = stat.count ? (avg.toFixed(2) + ' (' + stat.count + ')') : '-';
       td.textContent = display;
-      const bg = avg > 0 ? `rgba(16,185,129,${Math.min(0.85, Math.abs(avg))})` : avg < 0 ? `rgba(239,68,68,${Math.min(0.85, Math.abs(avg))})` : `rgba(245,158,11,0.08)`;
+      const bg = avg > 0 ? `rgba(16,185,129,${Math.min(0.9, Math.abs(avg))})` : avg < 0 ? `rgba(239,68,68,${Math.min(0.9, Math.abs(avg))})` : `rgba(245,158,11,0.08)`;
       td.style.background = bg;
       tr.appendChild(td);
     });
@@ -705,38 +726,52 @@ function renderHeatmap(){
   table.appendChild(tbody);
 }
 
-/* Zone chart */
+/* =========================
+   Zone chart
+   ========================= */
 function renderZoneChart(){
   const zoneMap = {};
-  state.data.forEach(r=>{ if(!zoneMap[r.zone]) zoneMap[r.zone] = {sum:0,count:0}; zoneMap[r.zone].sum += sentimentScore(r.sentiment); zoneMap[r.zone].count++; });
+  state.data.forEach(r=>{
+    if(!zoneMap[r.zone]) zoneMap[r.zone] = {sum:0,count:0};
+    zoneMap[r.zone].sum += sentimentScore(r.sentiment);
+    zoneMap[r.zone].count++;
+  });
   const arr = Object.entries(zoneMap).map(([z,v])=>({z,avg: v.count ? v.sum/v.count : 0, count:v.count})).sort((a,b)=>b.avg-a.avg);
   const chart = document.getElementById('zoneChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 360; const height = 220; const padding = 30; const svgNS = 'http://www.w3.org/2000/svg';
+  const width = chart.clientWidth || 380; const height = 220; const padding = 30; const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
-  arr.forEach((a,i)=>{ const bw = (width - padding*2) / Math.max(1,arr.length); const barH = ((a.avg + 1)/2) * (height - padding*2); const x = padding + i*bw + 6; const y = height - padding - barH; const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',Math.max(12,bw-18)); rect.setAttribute('height',barH); rect.setAttribute('rx',8); rect.setAttribute('fill', a.avg > 0 ? SENTIMENT_COLORS.Positive : (a.avg < 0 ? SENTIMENT_COLORS.Negative : SENTIMENT_COLORS.Neutral)); svg.appendChild(rect); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + (Math.max(12,bw-18))/2); label.setAttribute('y', height - 8); label.setAttribute('font-size','11'); label.setAttribute('text-anchor','middle'); label.textContent = a.z; svg.appendChild(label); });
+  arr.forEach((a,i)=>{ const bw = (width - padding*2) / Math.max(1,arr.length); const barH = ((a.avg + 1)/2) * (height - padding*2); const x = padding + i*bw + 6; const y = height - padding - barH; const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',Math.max(10,bw-12)); rect.setAttribute('height',barH); rect.setAttribute('rx',6); rect.setAttribute('fill', a.avg > 0 ? COLORS.Positive : (a.avg < 0 ? COLORS.Negative : COLORS.Neutral)); svg.appendChild(rect); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + (Math.max(10,bw-12))/2); label.setAttribute('y', height - 8); label.setAttribute('font-size','11'); label.setAttribute('text-anchor','middle'); label.textContent = a.z; svg.appendChild(label); const val = document.createElementNS(svgNS,'text'); val.setAttribute('x', x + (Math.max(10,bw-12))/2); val.setAttribute('y', y - 6); val.setAttribute('font-size','11'); val.setAttribute('text-anchor','middle'); val.setAttribute('font-weight','700'); val.textContent = a.avg.toFixed(2); svg.appendChild(val); });
   chart.appendChild(svg);
 }
 
-/* Comments rendering */
+/* =========================
+   Comments
+   ========================= */
 function renderComments(){
   const data = state.data.map(r=> ({...r, parsedDate: new Date(r.commentDate)})).sort((a,b)=> b.parsedDate - a.parsedDate);
+  data.forEach(r=>{ if(looksLikeDate(r.comment) && r.__raw && r.__raw.responseType && r.__raw.responseType.length>3) r.comment = r.__raw.responseType; });
+
   const positives = data.filter(r=> r.sentiment==='Positive').slice(0,15);
   const negatives = data.filter(r=> r.sentiment==='Negative').slice(0,15);
+
   const posWrap = document.getElementById('positiveComments'); posWrap.innerHTML='';
   positives.forEach(r=>{
     const card = document.createElement('div'); card.className='comment-card';
-    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😊</span><b>${escapeHtml(r.comment)}</b></div><div style="font-size:12px;color:var(--muted);margin-top:6px">Store: ${escapeHtml(r.storeCode)} | Date: ${escapeHtml(r.commentDate)}</div>`;
+    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😊</span><b>${escapeHtml(r.comment)}</b></div><div class="muted" style="margin-top:8px">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
     posWrap.appendChild(card);
   });
+
   const negWrap = document.getElementById('negativeComments'); negWrap.innerHTML='';
   negatives.forEach(r=>{
     const card = document.createElement('div'); card.className='comment-card';
-    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😠</span><b>${escapeHtml(r.comment)}</b></div><div style="font-size:12px;color:var(--muted);margin-top:6px">Store: ${escapeHtml(r.storeCode)} | Date: ${escapeHtml(r.commentDate)}</div>`;
+    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😠</span><b>${escapeHtml(r.comment)}</b></div><div class="muted" style="margin-top:8px">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
     negWrap.appendChild(card);
   });
 }
 
-/* Render everything */
+/* =========================
+   Render everything
+   ========================= */
 function renderEverything(){
   applyFilters();
   renderKPIsAndInsights();
@@ -749,7 +784,9 @@ function renderEverything(){
   renderComments();
 }
 
-/* CSV download */
+/* =========================
+   CSV download
+   ========================= */
 function downloadFilteredCSV(){
   if(!state.data.length){ alert('No data to download.'); return; }
   const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
@@ -761,45 +798,54 @@ function downloadFilteredCSV(){
   const csv = [header].concat(lines).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'voc_filtered.csv'; document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+  const a = document.createElement('a'); a.href = url; a.download = 'voc_filtered.csv'; a.style.display='none';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 
-/* Drawer open/close */
-const drawerBackdrop = document.getElementById('drawerBackdrop');
-document.getElementById('openFilters').addEventListener('click', ()=> { drawerBackdrop.style.display='flex'; renderFilterControls(); });
-document.getElementById('closeDrawer').addEventListener('click', ()=> { drawerBackdrop.style.display='none'; });
-drawerBackdrop.addEventListener('click', (e)=> { if(e.target === drawerBackdrop) drawerBackdrop.style.display='none'; });
-
-/* collapsible toggles inside drawer */
-document.addEventListener('click', (e)=>{
-  const t = e.target;
-  if(t.matches('.collapsible h4') || t.closest('.collapsible h4')){
-    const head = t.matches('.collapsible h4') ? t : t.closest('.collapsible h4');
-    const content = head.nextElementSibling;
-    if(content) content.style.display = (content.style.display === 'none' || !content.style.display) ? 'block' : 'none';
-  }
+/* =========================
+   UI wiring
+   ========================= */
+document.getElementById('openFilters').addEventListener('click', ()=>{
+  document.getElementById('drawerBackdrop').style.display='block';
+  document.getElementById('drawer').classList.add('open');
+});
+document.getElementById('closeDrawer').addEventListener('click', ()=> {
+  document.getElementById('drawerBackdrop').style.display='none';
+  document.getElementById('drawer').classList.remove('open');
+});
+document.getElementById('drawerBackdrop').addEventListener('click', ()=> {
+  document.getElementById('drawerBackdrop').style.display='none';
+  document.getElementById('drawer').classList.remove('open');
 });
 
-/* Wire apply/reset buttons */
-document.getElementById('applyFilters').addEventListener('click', ()=> { drawerBackdrop.style.display='none'; renderEverything(); });
-document.getElementById('resetFilters').addEventListener('click', ()=>{
+document.getElementById('applyFiltersDrawer').addEventListener('click', ()=> {
+  document.getElementById('drawerBackdrop').style.display='none';
+  document.getElementById('drawer').classList.remove('open');
+  renderEverything();
+});
+document.getElementById('resetFiltersDrawer').addEventListener('click', ()=>{
   state.filters = { businessName:null, zones:new Set(), states:new Set(), cities:new Set(), stores:new Set() };
   renderFilterControls();
   renderEverything();
 });
+document.getElementById('resetFiltersBtn').addEventListener('click', ()=>{
+  state.filters = { businessName:null, zones:new Set(), states:new Set(), cities:new Set(), stores:new Set() };
+  renderFilterControls();
+  renderEverything();
+});
+document.getElementById('downloadCsvBtn').addEventListener('click', ()=> downloadFilteredCSV());
 
-/* Download CSV binding */
-document.getElementById('downloadCsvBtn').addEventListener('click', downloadFilteredCSV);
-
-/* Initialization */
+/* =========================
+   Init
+   ========================= */
 (async function init(){
   const raw = await loadReviewData();
   state.rawData = raw.map(r=> normalizeRecord(r));
-  // ensure months uppercase
-  state.rawData.forEach(r=> r.month = (r.month||'').toString().toUpperCase());
   refreshDerivedLists(state.rawData);
-  // no default filters to keep all visible
+
+  // set default business name if present
+  if(state.derived.businessNames.length) state.filters.businessName = state.derived.businessNames[0];
+
   renderFilterControls();
   renderEverything();
 })();
