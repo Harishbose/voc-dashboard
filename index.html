@@ -1,992 +1,1205 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Voice of Customer — Google Reviews</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#f1f3f5;
-    --card:#ffffff;
-    --muted:#6b7280;
-    --blue:#0b4a83;
-    --positive:#10b981;
-    --negative:#ef4444;
-    --neutral:#f59e0b;
-    --glass: rgba(255,255,255,0.85);
-    font-family: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:#0f172a}
-  .app { min-height:100vh; display:flex; flex-direction:column; transition:margin-left .25s ease; }
-  /* Drawer */
-  .drawer { position:fixed; left:0; top:0; bottom:0; width:340px; background:var(--card); box-shadow: 4px 0 18px rgba(2,6,23,0.08); padding:16px; overflow:auto; transform:translateX(-360px); transition:transform .25s ease; z-index:60; border-right:1px solid rgba(2,6,23,0.03)}
-  .drawer.open{ transform:translateX(0); }
-  .drawer .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
-  .drawer h3{ margin:0; font-size:18px; color:var(--blue) }
-  .drawer .close{ border-radius:8px; padding:6px 8px; border:1px solid rgba(2,6,23,0.06); cursor:pointer; background:#fff }
-  /* push behavior */
-  body.drawer-open .content-wrap{ margin-left:340px; transition:margin-left .25s ease; }
-  /* Topbar */
-  .topbar{ padding:28px 32px 8px; display:flex; align-items:center; justify-content:center; position:relative; gap:12px }
-  .filter-toggle{ position:absolute; left:16px; top:28px; border-radius:8px; padding:8px 12px; background:var(--card); box-shadow:0 6px 18px rgba(2,6,23,0.06); cursor:pointer; border:1px solid rgba(2,6,23,0.04)}
-  .title{ text-align:center }
-  .title h1{ margin:0; font-size:24px; font-weight:700 }
-  .title p{ margin:4px 0 0; color:var(--muted) }
-  /* KPIs */
-  .kpis { display:flex; gap:16px; justify-content:center; margin-top:18px; flex-wrap:wrap }
-  .kpi { width:220px; background:var(--card); padding:18px; border-radius:12px; box-shadow:0 6px 18px rgba(2,6,23,0.04); text-align:left }
-  .kpi .label{ color:var(--muted); font-size:13px }
-  .kpi .value{ font-size:28px; font-weight:700; margin-top:8px }
-  .controls-row{ display:flex; gap:12px; justify-content:center; margin-top:12px }
-  .btn { padding:8px 12px; border-radius:8px; background:var(--card); border:1px solid rgba(2,6,23,0.06); cursor:pointer }
-  /* Layout grid */
-  .content-wrap{ padding:18px 28px 48px; transition:margin-left .25s ease; }
-  .insights-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:14px; margin-top:20px }
-  .insight-card{ background:var(--card); border-radius:12px; padding:14px; box-shadow:0 6px 18px rgba(2,6,23,0.04) }
-  .dashboard-grid{ display:grid; grid-template-columns: 1fr 420px; gap:16px; margin-top:18px; align-items:start }
-  .card{ background:var(--card); border-radius:12px; padding:18px; box-shadow:0 6px 18px rgba(2,6,23,0.04); overflow:hidden }
-  .card h3{ margin:0 0 10px 0; color:var(--blue); font-size:18px }
-  .pills{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px }
-  .pill { background:#f1f5f9; padding:8px 12px; border-radius:999px; font-weight:500; font-size:13px; cursor:pointer }
-  /* driver chart small */
-  #driversChart svg{ width:100%; height:200px; display:block }
-  /* pie & line */
-  #pieChart{ width:100%; height:100%; min-height:220px }
-  #lineChart{ width:100%; height:220px }
-  /* word cloud */
-  .word-cloud{ min-height:120px; display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start }
-  .wc-pill{ padding:8px 12px; border-radius:999px; color:white; font-weight:600 }
-  /* heatmap compact */
-  .heatmap-wrap{ overflow:auto; margin-top:8px }
-  .heatmap-table{ border-collapse:collapse; width:100% }
-  .heatmap-table th, .heatmap-table td{ padding:8px 10px; border:1px solid rgba(2,6,23,0.04); white-space:nowrap; text-align:center }
-  /* comments */
-  .comments-row{ display:flex; gap:12px; margin-top:16px }
-  .comment-column{ flex:1; max-height:320px; overflow:auto }
-  .comment-card{ background:#f8fafc; border-radius:8px; padding:10px; margin-bottom:8px; border:1px solid rgba(2,6,23,0.04) }
-  .comment-card b{ display:block }
-  /* responsive */
-  @media (max-width:1100px){
-    .dashboard-grid{ grid-template-columns:1fr }
-    .insights-grid{ grid-template-columns:1fr }
-    body.drawer-open .content-wrap{ margin-left:0 } /* mobile: overlay */
-    .drawer{ width:340px }
-  }
-  /* small helpers */
-  .muted{ color:var(--muted) }
-  .center{ text-align:center }
-  .value-big{ font-size:28px; font-weight:700 }
-  /* tooltip small */
-  .tooltip-box{ background:#fff; border:1px solid rgba(2,6,23,0.06); padding:12px; border-radius:8px; box-shadow:0 8px 24px rgba(2,6,23,0.08); }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CX – Voice of Customer Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chrono-node/1.3.11/chrono.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.15.0/Recharts.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-100 font-roboto">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+    const { createRoot } = ReactDOM;
 
-<!-- Drawer -->
-<aside class="drawer" id="drawer">
-  <div class="header">
-    <h3>Filters</h3>
-    <button class="close" id="closeDrawer">Close</button>
-  </div>
+    const emotionMapping = {
+      POSITIVE: ['Satisfaction', 'Appreciation', 'Gratitude', 'Happy'],
+      NEGATIVE: ['Frustration', 'Disappointment'],
+      NEUTRAL: ['Neutral', 'Confusion']
+    };
 
-  <div style="margin-bottom:10px; font-size:13px; color:var(--muted)">Use filters to narrow down reviews. Sections collapse to keep panel tidy.</div>
+    const classifyImprovementCategory = (comment) => {
+      if (!comment || typeof comment !== 'string') return 'Other';
+      const lowerComment = comment.toLowerCase();
+      if (lowerComment.includes('material issue') || lowerComment.includes('damage') || lowerComment.includes('comfort') ||
+          lowerComment.includes('wear') || lowerComment.includes('tear') || lowerComment.includes('broken') ||
+          lowerComment.includes('malfunction') || lowerComment.includes('poor craftsmanship') ||
+          lowerComment.includes('quality') || lowerComment.includes('material') || lowerComment.includes('product') ||
+          lowerComment.includes('durability') || lowerComment.includes('defect') || lowerComment.includes('faulty')) {
+        return 'Product Quality';
+      }
+      if (lowerComment.includes('helpful') || lowerComment.includes('unhelpful') || lowerComment.includes('courteous') ||
+          lowerComment.includes('uncivil') || lowerComment.includes('sales interaction') || lowerComment.includes('attentive') ||
+          lowerComment.includes('ignored') || lowerComment.includes('arrogant') || lowerComment.includes('behaviour') ||
+          lowerComment.includes('rude') || lowerComment.includes('polite') || lowerComment.includes('attitude') ||
+          lowerComment.includes('courtesy') || lowerComment.includes('professionalism')) {
+        return 'Staff Behaviour';
+      }
+      if (lowerComment.includes('offer mismatch') || lowerComment.includes('overcharged') || lowerComment.includes('discount not applied') ||
+          lowerComment.includes('pricey') || lowerComment.includes('costly') || lowerComment.includes('rip-off') ||
+          lowerComment.includes('bargain') || lowerComment.includes('price') || lowerComment.includes('cost') ||
+          lowerComment.includes('expensive') || lowerComment.includes('discount') || lowerComment.includes('deal') ||
+          lowerComment.includes('value')) {
+        return 'Pricing & Discounts';
+      }
+      if (lowerComment.includes('collection') || lowerComment.includes('variety') || lowerComment.includes('size') ||
+          lowerComment.includes('available') || lowerComment.includes('stock') || lowerComment.includes('availability')) {
+        return 'Inventory Management';
+      }
+      if (lowerComment.includes('return') || lowerComment.includes('exchange') || lowerComment.includes('refund') ||
+          lowerComment.includes('policy') || lowerComment.includes('returnable')) {
+        return 'Return & Refund Policies';
+      }
+      if (lowerComment.includes('support') || lowerComment.includes('help') || lowerComment.includes('assistance') ||
+          lowerComment.includes('responsive') || lowerComment.includes('query') || lowerComment.includes('resolution')) {
+        return 'Customer Support';
+      }
+      if (lowerComment.includes('promotion') || lowerComment.includes('offer') || lowerComment.includes('loyalty') ||
+          lowerComment.includes('deal') || lowerComment.includes('coupon') || lowerComment.includes('reward')) {
+        return 'Promotions & Offers';
+      }
+      if (lowerComment.includes('billing') || lowerComment.includes('payment') || lowerComment.includes('charge') ||
+          lowerComment.includes('overcharge') || lowerComment.includes('invoice') || lowerComment.includes('transaction')) {
+        return 'Billing & Payment Issues';
+      }
+      if (lowerComment.includes('wait') || lowerComment.includes('queue') || lowerComment.includes('delay') ||
+          lowerComment.includes('slow') || lowerComment.includes('line') || lowerComment.includes('turnaround')) {
+        return 'Wait Time / Queue Management';
+      }
+      if (lowerComment.includes('staff') || lowerComment.includes('service') || lowerComment.includes('salesman') ||
+          lowerComment.includes('experience') || lowerComment.includes('assistance') || lowerComment.includes('interaction')) {
+        return 'Store Experience';
+      }
+      return 'Other';
+    };
 
-  <!-- Business section -->
-  <details open style="margin-bottom:10px">
-    <summary style="font-weight:600;cursor:pointer">Business Name (single-select)</summary>
-    <div id="businessNameWrap" style="margin-top:8px"></div>
-  </details>
+    const classifyEmotion = (comment, sentiment) => {
+      if (!comment || typeof comment !== 'string') return 'Neutral';
+      const lowerComment = comment.toLowerCase();
+      if (sentiment === 'POSITIVE') {
+        if (lowerComment.includes('excellent') || lowerComment.includes('great') || lowerComment.includes('awesome') || lowerComment.includes('delighted')) return 'Satisfaction';
+        if (lowerComment.includes('thank') || lowerComment.includes('appreciate')) return 'Gratitude';
+        if (lowerComment.includes('happy') || lowerComment.includes('enjoyed')) return 'Happy';
+        return 'Appreciation';
+      } else if (sentiment === 'NEGATIVE') {
+        if (lowerComment.includes('rude') || lowerComment.includes('worst') || lowerComment.includes('poor') || lowerComment.includes('frustrated')) return 'Frustration';
+        if (lowerComment.includes('disappoint') || lowerComment.includes('bad')) return 'Disappointment';
+        return 'Disappointment';
+      } else {
+        if (lowerComment.includes('confused') || lowerComment.includes('unclear') || lowerComment.includes('puzzled')) return 'Confusion';
+        return 'Neutral';
+      }
+    };
 
-  <!-- Zone -->
-  <details style="margin-bottom:10px">
-    <summary style="font-weight:600;cursor:pointer">Zone</summary>
-    <div id="zoneWrap" style="margin-top:8px"></div>
-  </details>
+    const extractKeywords = (comment) => {
+      if (!comment || typeof comment !== 'string') return [];
+      const words = comment.toLowerCase().split(/\s+/).filter(word => word.length > 3 && !['with', 'from', 'that', 'this'].includes(word));
+      const frequency = {};
+      words.forEach(word => { frequency[word] = (frequency[word] || 0) + 1; });
+      return Object.entries(frequency).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([word]) => word);
+    };
 
-  <!-- State -->
-  <details style="margin-bottom:10px">
-    <summary style="font-weight:600;cursor:pointer">State</summary>
-    <input id="stateSearch" placeholder="Search state..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-top:8px"/>
-    <div id="stateWrap" style="margin-top:8px; max-height:220px; overflow:auto"></div>
-  </details>
+    const formatDate = (isoDate) => {
+      const date = new Date(isoDate);
+      return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+    };
 
-  <!-- City -->
-  <details style="margin-bottom:10px">
-    <summary style="font-weight:600;cursor:pointer">City</summary>
-    <input id="citySearch" placeholder="Search city..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-top:8px"/>
-    <div id="cityWrap" style="margin-top:8px; max-height:180px; overflow:auto"></div>
-  </details>
+    const Dashboard = () => {
+      const [data, setData] = useState([]);
+      const [filters, setFilters] = useState({
+        businessName: '',
+        zone: [],
+        state: [],
+        city: [],
+        storeCode: [],
+        mallHS: [],
+        sentiment: [],
+        fy: [],
+        month: []
+      });
+      const [previousFilters, setPreviousFilters] = useState(null);
+      const [isFilterOpen, setIsFilterOpen] = useState(false);
+      const [loading, setLoading] = useState(true);
 
-  <!-- Store -->
-  <details style="margin-bottom:10px">
-    <summary style="font-weight:600;cursor:pointer">Store</summary>
-    <input id="storeSearch" placeholder="Search store..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-top:8px"/>
-    <div id="storeWrap" style="margin-top:8px; max-height:180px; overflow:auto"></div>
-  </details>
+      useEffect(() => {
+        const csv = loadFileData("Test 4.csv");
+        Papa.parse(csv, {
+          header: true,
+          skipEmptyLines: true,
+          dynamicTyping: false,
+          transformHeader: header => header.trim().replace(/^"|"$/g, ''),
+          transform: (value, header) => {
+            let cleaned = value.trim().replace(/^"|"$/g, '');
+            if (header === 'Customer Rating') {
+              const num = parseInt(cleaned);
+              return isNaN(num) ? null : num;
+            }
+            if (header === 'Comment Date' || header === 'Comment Date_NEW') {
+              const parsedDate = chrono.parseDate(cleaned);
+              return parsedDate ? parsedDate.toISOString() : cleaned;
+            }
+            return cleaned;
+          },
+          complete: (results) => {
+            const cleanedData = results.data.map(row => {
+              let category = classifyImprovementCategory(row['Customer Response']);
+              return {
+                ...row,
+                'Customer Rating': row['Customer Rating'],
+                'Comment Date': row['Comment Date'],
+                ImprovementCategory: category,
+                Emotion: classifyEmotion(row['Customer Response'], row['Sentiment']),
+                Keywords: extractKeywords(row['Customer Response'])
+              };
+            }).filter(row => row['Customer Rating'] !== null);
+            setData(cleanedData);
+            setLoading(false);
+            const categoryCounts = cleanedData.reduce((acc, row) => {
+              acc[row.ImprovementCategory] = (acc[row.ImprovementCategory] || 0) + 1;
+              return acc;
+            }, {});
+            console.log('Category Distribution:', categoryCounts);
+          },
+          error: (err) => console.error(err)
+        });
+      }, []);
 
-  <!-- other small filters -->
-  <details style="margin-bottom:10px">
-    <summary style="font-weight:600;cursor:pointer">Mall Type</summary>
-    <div id="mallWrap" style="margin-top:8px"></div>
-  </details>
+      const filteredData = useMemo(() => {
+        return data.filter(row => {
+          return (
+            (!filters.businessName || row['Business Name'] === filters.businessName) &&
+            (filters.zone.length === 0 || filters.zone.includes(row['Zone'])) &&
+            (filters.state.length === 0 || filters.state.includes(row['State'])) &&
+            (filters.city.length === 0 || filters.city.includes(row['City'])) &&
+            (filters.storeCode.length === 0 || filters.storeCode.includes(row['Store Code'])) &&
+            (filters.mallHS.length === 0 || filters.mallHS.includes(row['Mall/HS'])) &&
+            (filters.sentiment.length === 0 || filters.sentiment.includes(row['Sentiment'])) &&
+            (filters.fy.length === 0 || filters.fy.includes(row['FY'])) &&
+            (filters.month.length === 0 || filters.month.includes(row['Month']))
+          );
+        });
+      }, [data, filters]);
 
-  <details style="margin-bottom:10px">
-    <summary style="font-weight:600;cursor:pointer">Sentiment</summary>
-    <div id="sentimentWrap" style="margin-top:8px"></div>
-  </details>
+      const getUniqueValues = (key) => [...new Set(data.map(row => row[key]))].sort();
 
-  <details style="margin-bottom:10px">
-    <summary style="font-weight:600;cursor:pointer">FY / Quarter / Month</summary>
-    <div id="fyWrap" style="margin-top:8px"></div>
-    <div id="quarterWrap" style="margin-top:8px"></div>
-    <div id="monthWrap" style="margin-top:8px"></div>
-  </details>
+      const getFilteredZones = () => getUniqueValues('Zone');
+      const getFilteredStates = () => {
+        if (filters.zone.length === 0) return getUniqueValues('State');
+        return [...new Set(data.filter(row => filters.zone.includes(row['Zone'])).map(row => row['State']))].sort();
+      };
+      const getFilteredCities = () => {
+        if (filters.zone.length === 0 && filters.state.length === 0) return getUniqueValues('City');
+        return [...new Set(data.filter(row => 
+          (filters.zone.length === 0 || filters.zone.includes(row['Zone'])) &&
+          (filters.state.length === 0 || filters.state.includes(row['State']))
+        ).map(row => row['City']))].sort();
+      };
+      const getFilteredStoreCodes = () => {
+        if (filters.zone.length === 0 && filters.state.length === 0 && filters.city.length === 0) return getUniqueValues('Store Code');
+        return [...new Set(data.filter(row => 
+          (filters.zone.length === 0 || filters.zone.includes(row['Zone'])) &&
+          (filters.state.length === 0 || filters.state.includes(row['State'])) &&
+          (filters.city.length === 0 || filters.city.includes(row['City']))
+        ).map(row => row['Store Code']))].sort();
+      };
 
-  <div style="display:flex; gap:8px; margin-top:12px">
-    <button class="btn" id="applyFilters">Apply</button>
-    <button class="btn" id="resetFilters">Reset</button>
-  </div>
+      const filterOptions = {
+        businessName: getUniqueValues('Business Name'),
+        zone: getFilteredZones(),
+        state: getFilteredStates(),
+        city: getFilteredCities(),
+        storeCode: getFilteredStoreCodes(),
+        mallHS: getUniqueValues('Mall/HS'),
+        sentiment: getUniqueValues('Sentiment'),
+        fy: getUniqueValues('FY'),
+        month: getUniqueValues('Month')
+      };
 
-  <div style="height:26px"></div>
-</aside>
+      const handleFilterChange = (key, value, isChartClick = false) => {
+        let newFilters = { ...filters };
+        if (isChartClick && filters[key].includes(value)) {
+          newFilters = { ...filters, [key]: previousFilters[key] || [] };
+        } else {
+          setPreviousFilters({ ...filters });
+          if (key === 'businessName') {
+            newFilters[key] = value;
+          } else {
+            const newValues = newFilters[key].includes(value)
+              ? newFilters[key].filter(v => v !== value)
+              : [...newFilters[key], value];
+            newFilters[key] = newValues;
+          }
+        }
+        if (key === 'zone') {
+          newFilters.state = [];
+          newFilters.city = [];
+          newFilters.storeCode = [];
+        } else if (key === 'state') {
+          newFilters.city = [];
+          newFilters.storeCode = [];
+        } else if (key === 'city') {
+          newFilters.storeCode = [];
+        }
+        setFilters(newFilters);
+      };
 
-<!-- Page -->
-<div class="app" id="app">
-  <div class="topbar">
-    <button class="filter-toggle" id="openDrawer">Filters</button>
-    <div class="title">
-      <h1>Voice of Customer — Google Reviews</h1>
-      <p>Interactive Analytics Dashboard</p>
+      const resetFilters = () => {
+        setFilters({
+          businessName: '',
+          zone: [],
+          state: [],
+          city: [],
+          storeCode: [],
+          mallHS: [],
+          sentiment: [],
+          fy: [],
+          month: []
+        });
+        setPreviousFilters(null);
+      };
 
-      <div class="kpis" style="margin-top:12px">
-        <div class="kpi">
-          <div class="label">Total Reviews</div>
-          <div class="value" id="kpiTotal">0</div>
-        </div>
-        <div class="kpi">
-          <div class="label">% Negative Reviews</div>
-          <div class="value" id="kpiNegative">0%</div>
-        </div>
-        <div class="kpi">
-          <div class="label">Best Store</div>
-          <div class="value" id="kpiBest">—</div>
-        </div>
-        <div class="kpi">
-          <div class="label">Worst Store</div>
-          <div class="value" id="kpiWorst">—</div>
-        </div>
-      </div>
+      const totalReviews = filteredData.length;
+      const negativeReviews = filteredData.filter(row => row['Sentiment'] === 'NEGATIVE').length;
+      const percentNegative = totalReviews > 0 ? ((negativeReviews / totalReviews) * 100).toFixed(1) : 0;
+      const storeRatings = {};
+      filteredData.forEach(row => {
+        const store = row['Store Code'];
+        if (!storeRatings[store]) storeRatings[store] = { total: 0, count: 0 };
+        storeRatings[store].total += row['Customer Rating'];
+        storeRatings[store].count += 1;
+      });
+      const storeAvgRatings = Object.entries(storeRatings).map(([store, { total, count }]) => ({
+        store,
+        avgRating: (total / count).toFixed(1)
+      }));
+      const bestStore = storeAvgRatings.length > 0 ? storeAvgRatings.reduce((a, b) => a.avgRating > b.avgRating ? a : b) : { store: 'N/A', avgRating: 'N/A' };
+      const lowestRated = storeAvgRatings.length > 0 ? storeAvgRatings.reduce((a, b) => a.avgRating < b.avgRating ? a : b) : { store: 'N/A', avgRating: 'N/A' };
 
-      <div class="controls-row">
-        <button class="btn" id="downloadCsvBtn">Download CSV</button>
-        <button class="btn" id="resetFiltersHeader">Reset Filters</button>
-      </div>
-    </div>
-  </div>
+      const categoryCounts = {};
+      const categorySentimentCounts = {};
+      filteredData.forEach(row => {
+        const cat = row['ImprovementCategory'];
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        if (!categorySentimentCounts[cat]) categorySentimentCounts[cat] = { POSITIVE: 0, NEGATIVE: 0, NEUTRAL: 0 };
+        categorySentimentCounts[cat][row['Sentiment']] = (categorySentimentCounts[cat][row['Sentiment']] || 0) + 1;
+      });
+      const topCategory = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0] || ['N/A', 0];
+      const topCategorySentiments = categorySentimentCounts[topCategory[0]] || { POSITIVE: 0, NEGATIVE: 0, NEUTRAL: 0 };
+      const zoneRatings = {};
+      filteredData.forEach(row => {
+        const zone = row['Zone'];
+        if (!zoneRatings[zone]) zoneRatings[zone] = { total: 0, count: 0 };
+        zoneRatings[zone].total += row['Customer Rating'];
+        zoneRatings[zone].count += 1;
+      });
+      const zoneAvgRatings = Object.entries(zoneRatings).map(([zone, { total, count }]) => ({
+        zone,
+        avgRating: (total / count).toFixed(1)
+      }));
+      const worstZone = zoneAvgRatings.length > 0 ? zoneAvgRatings.reduce((a, b) => a.avgRating < b.avgRating ? a : b) : { zone: 'N/A', avgRating: 'N/A' };
+      const topComplaint = filteredData.filter(row => row['Sentiment'] === 'NEGATIVE').reduce((acc, row) => {
+        const cat = row['ImprovementCategory'];
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {});
+      const topComplaintCategory = Object.entries(topComplaint).sort((a, b) => b[1] - a[1])[0] || ['N/A', 0];
 
-  <div class="content-wrap">
-    <!-- strategic insights -->
-    <h2 style="margin:18px 0 8px 4px; color:var(--blue)">Strategic Insights</h2>
-    <div class="insights-grid" id="insightsGrid">
-      <!-- cards inserted by JS -->
-    </div>
+      const keyDriversData = useMemo(() => {
+        return Object.entries(categoryCounts)
+          .map(([name, value]) => ({
+            name,
+            value,
+            POSITIVE: categorySentimentCounts[name]?.POSITIVE || 0,
+            NEGATIVE: categorySentimentCounts[name]?.NEGATIVE || 0,
+            NEUTRAL: categorySentimentCounts[name]?.NEUTRAL || 0
+          }))
+          .sort((a, b) => b.value - a.value)
+          .filter(item => item.name !== 'Other');
+      }, [categoryCounts, categorySentimentCounts]);
 
-    <!-- main grid -->
-    <div class="dashboard-grid" style="margin-top:18px">
-      <div>
-        <div class="card">
-          <h3>Key Drivers of Customer Feedback (All Sentiments)</h3>
-          <div class="pills" id="driverPills"></div>
-          <div id="driversChart"></div>
-        </div>
+      const yAxisDomain = useMemo(() => {
+        const isAnyFilterApplied = filters.businessName || 
+          filters.zone.length > 0 || 
+          filters.state.length > 0 || 
+          filters.city.length > 0 || 
+          filters.storeCode.length > 0 || 
+          filters.mallHS.length > 0 || 
+          filters.sentiment.length > 0 || 
+          filters.fy.length > 0 || 
+          filters.month.length > 0;
+        if (!isAnyFilterApplied) {
+          return [0, 5000];
+        }
+        const maxValue = Math.max(...keyDriversData.map(item => item.value), 0);
+        return [0, maxValue + 100];
+      }, [filters, keyDriversData]);
 
-        <div class="card" style="margin-top:16px">
-          <h3>Emotion Word Cloud</h3>
-          <div class="word-cloud" id="wordCloud"></div>
-        </div>
+      const emotionCounts = {};
+      filteredData.forEach(row => {
+        const emotion = row['Emotion'];
+        emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
+      });
+      const wordCloudData = useMemo(() => {
+        const requiredEmotions = ['Satisfaction', 'Neutral', 'Appreciation', 'Happy', 'Gratitude', 'Confusion', 'Frustration', 'Disappointment'];
+        const counts = requiredEmotions.map(emotion => [emotion, emotionCounts[emotion] || 0]);
+        const values = counts.map(([_, count]) => count);
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        const minSize = 40;
+        const maxSize = 80;
+        return counts.map(([emotion, count]) => {
+          const size = minValue === maxValue ? minSize : minSize + (count - minValue) * (maxSize - minSize) / (maxValue - minValue);
+          return {
+            text: emotion,
+            value: count,
+            size,
+            color: emotion === 'Satisfaction' ? '#10b981' :
+                   emotion === 'Appreciation' ? '#22c55e' :
+                   emotion === 'Happy' ? '#34d399' :
+                   emotion === 'Gratitude' ? '#6ee7b7' :
+                   emotion === 'Neutral' ? '#f59e0b' :
+                   emotion === 'Confusion' ? '#f97316' :
+                   emotion === 'Frustration' ? '#ef4444' :
+                   emotion === 'Disappointment' ? '#dc2626' : '#6b7280'
+          };
+        });
+      }, [emotionCounts]);
 
-        <div class="card" style="margin-top:16px">
-          <h3>Store Sentiment Heatmap (Top stores × Categories)</h3>
-          <div class="heatmap-wrap" id="heatmapWrap">
-            <table class="heatmap-table" id="heatmapTable"></table>
+      const sentimentCounts = { POSITIVE: 0, NEGATIVE: 0, NEUTRAL: 0 };
+      filteredData.forEach(row => {
+        sentimentCounts[row['Sentiment']] += 1;
+      });
+      const pieData = useMemo(() => {
+        const total = Object.values(sentimentCounts).reduce((sum, val) => sum + val, 0);
+        return Object.entries(sentimentCounts).map(([name, value]) => ({
+          name,
+          value,
+          percentage: total > 0 ? ((value / total) * 100).toFixed(1) : 0
+        }));
+      }, [sentimentCounts]);
+
+      const zoneSentimentData = useMemo(() => {
+        return filterOptions.zone.map(zone => {
+          const zoneData = filteredData.filter(row => row['Zone'] === zone);
+          return {
+            zone,
+            POSITIVE: zoneData.filter(row => row['Sentiment'] === 'POSITIVE').length,
+            NEGATIVE: zoneData.filter(row => row['Sentiment'] === 'NEGATIVE').length,
+            NEUTRAL: zoneData.filter(row => row['Sentiment'] === 'NEUTRAL').length
+          };
+        });
+      }, [filteredData]);
+
+      const months = [...new Set(filteredData.map(row => row['Month']))].sort((a, b) => {
+        const monthOrder = ['K. FEB', 'L. MAR', 'A. APR'];
+        return monthOrder.indexOf(a) - monthOrder.indexOf(b);
+      });
+      const trendData = useMemo(() => {
+        return months.map(month => {
+          const monthData = filteredData.filter(row => row['Month'] === month);
+          return {
+            month,
+            POSITIVE: monthData.filter(row => row['Sentiment'] === 'POSITIVE').length,
+            NEGATIVE: monthData.filter(row => row['Sentiment'] === 'NEGATIVE').length,
+            NEUTRAL: monthData.filter(row => row['Sentiment'] === 'NEUTRAL').length
+          };
+        });
+      }, [filteredData]);
+
+      const topStores = Object.entries(filteredData.reduce((acc, row) => {
+        acc[row['Store Code']] = (acc[row['Store Code']] || 0) + 1;
+        return acc;
+      }, {})).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([store]) => store);
+      const categories = ['Store Experience', 'Product Quality', 'Inventory Management', 'Pricing & Discounts', 'Return & Refund Policies', 'Customer Support', 'Promotions & Offers', 'Billing & Payment Issues', 'Staff Behaviour', 'Wait Time / Queue Management'];
+      const shortLabels = {
+        'Store Experience': 'Store\nExp',
+        'Product Quality': 'Prod\nQlty',
+        'Inventory Management': 'Inv\nMgmt',
+        'Pricing & Discounts': 'Price\nDisc',
+        'Return & Refund Policies': 'Return\nRefund',
+        'Customer Support': 'Cust\nSupport',
+        'Promotions & Offers': 'Promo\nOffers',
+        'Billing & Payment Issues': 'Bill\nPay',
+        'Staff Behaviour': 'Staff\nBehvr',
+        'Wait Time / Queue Management': 'Wait\nQueue'
+      };
+      const heatmapData = useMemo(() => {
+        return topStores.map(store => {
+          const storeData = filteredData.filter(row => row['Store Code'] === store);
+          const rowData = { store };
+          categories.forEach(cat => {
+            const catData = storeData.filter(row => row['ImprovementCategory'] === cat);
+            const positive = catData.filter(row => row['Sentiment'] === 'POSITIVE').length;
+            const negative = catData.filter(row => row['Sentiment'] === 'NEGATIVE').length;
+            const neutral = catData.filter(row => row['Sentiment'] === 'NEUTRAL').length;
+            const total = positive + negative + neutral;
+            let sentiment = 'None';
+            let color = '#d1d5db';
+            let arrow = '-';
+            if (total > 0) {
+              if (positive >= negative && positive >= neutral) {
+                sentiment = 'POSITIVE';
+                color = '#10b981';
+                arrow = '↑';
+              } else if (negative > positive && negative >= neutral) {
+                sentiment = 'NEGATIVE';
+                color = '#ef4444';
+                arrow = '↓';
+              } else {
+                sentiment = 'NEUTRAL';
+                color = '#f59e0b';
+                arrow = '↔';
+              }
+            }
+            rowData[cat] = { count: total, sentiment, color, arrow, sampleComment: catData[0]?.['Customer Response'] || '' };
+          });
+          return rowData;
+        });
+      }, [filteredData]);
+
+      const cityCoordinates = {
+        'Hyderabad': [17.3850, 78.4867],
+        'Mumbai': [19.0760, 72.8777],
+        'Bangalore': [12.9716, 77.5946],
+        'Delhi': [28.7041, 77.1025],
+        'Chennai': [13.0827, 80.2707],
+        'Kolkata': [22.5726, 88.3639],
+        'Pune': [18.5204, 73.8567],
+        'Ahmedabad': [23.0225, 72.5714],
+        'Jaipur': [26.9124, 75.7873],
+        'Lucknow': [26.8467, 80.9462],
+        'Kochi': [9.9312, 76.2673],
+        'Surat': [21.1702, 72.8311],
+        'Bhubaneswar': [20.2961, 85.8245],
+        'Bareilly': [28.3670, 79.4304],
+        'Jamnagar': [22.4707, 70.0577],
+        'Varanasi': [25.3176, 82.9739],
+        'Raipur': [21.2514, 81.6296],
+        'Coimbatore': [11.0168, 76.9558],
+        'Hubli': [15.3647, 75.1240],
+        'Thane': [19.2183, 72.9781],
+        'Chandigarh': [30.7333, 76.7794],
+        'Patna': [25.5941, 85.1376],
+        'Gandhidham': [23.0753, 70.1337],
+        'Kannur': [11.8745, 75.3704],
+        'Nagpur': [21.1458, 79.0882],
+        'Belgaum': [15.8497, 74.4977],
+        'Secunderabad': [17.4399, 78.4983],
+        'Guwahati': [26.1445, 91.7362],
+        'Panipat': [29.3909, 76.9635],
+        'Kottayam': [9.5916, 76.5222],
+        'Kota': [25.2138, 75.8648],
+        'Thiruvananthapuram': [8.5241, 76.9366],
+        'Imphal': [24.8170, 93.9368],
+        'Patiala': [30.3398, 76.3869],
+        'Amravati': [20.9320, 77.7523],
+        'Mangalore': [12.9141, 74.8560],
+        'Udupi': [13.3409, 74.7421],
+        'Vijayawada': [16.5062, 80.6480],
+        'Ganganagar': [29.9038, 73.8772],
+        'Noida': [28.5355, 77.3910],
+        'Dehradun': [30.3165, 78.0322],
+        'Sikar': [27.6121, 75.1399],
+        'Gorakhpur': [26.7606, 83.3732],
+        'Nadiad': [22.6939, 72.8616],
+        'Asansol': [23.6833, 86.9833],
+        'Sangli': [16.8544, 74.5642],
+        'Jabalpur': [23.1815, 79.9864],
+        'Udaipur': [24.5854, 73.7125],
+        'Guntur': [16.3067, 80.4365],
+        'Bilaspur': [22.0796, 82.1391],
+        'Pathankot': [32.2733, 75.6529],
+        'Salem': [11.6643, 78.1460],
+        'Meerut': [28.9845, 77.7064],
+        'Dharwad': [15.4589, 75.0078],
+        'Bathinda': [30.2110, 74.9455],
+        'Mohali': [30.7046, 76.7179],
+        'Visakhapatnam': [17.6868, 83.2185],
+        'Nellore': [14.4426, 79.9865],
+        'Murshidabad': [24.1759, 88.2718],
+        'Calicut': [11.2588, 75.7804],
+        'Vadodara': [22.3072, 73.1812],
+        'Aurangabad': [19.8762, 75.3433],
+        'Jodhpur': [26.2389, 73.0243],
+        'Tiruchirappalli': [10.7905, 78.7047],
+        'Dindigul': [10.3673, 77.9803],
+        'Vellore': [12.9165, 79.1325],
+        'Ranchi': [23.3441, 85.3096],
+        'Jalgaon': [21.0077, 75.5626],
+        'Madurai': [9.9252, 78.1198],
+        'Kolhapur': [16.6950, 74.2317],
+        'Yamuna Nagar': [30.1290, 77.2808],
+        'Tirupati': [13.6288, 79.4192],
+        'Nashik': [19.9975, 73.7898],
+        'Anand': [22.5525, 72.9552],
+        'Kanchipuram': [12.8342, 79.7036],
+        'Nagercoil': [8.1833, 77.4119],
+        'Shivamogga': [13.9299, 75.5681],
+        'Navi Mumbai': [19.0330, 73.0297],
+        'Gulbarga': [17.3297, 76.8343],
+        'Ambala': [30.3753, 76.7821],
+        'Bhopal': [23.2599, 77.4126],
+        'Latur': [18.4088, 76.5604],
+        'Pondicherry': [11.9416, 79.8083],
+        'Siliguri': [26.7271, 88.3953],
+        'Alwar': [27.5528, 76.6346],
+        'Thiruvallur': [13.1420, 79.9090],
+        'Kollam': [8.8932, 76.6141],
+        'Dhanbad': [23.7957, 86.4304],
+        'Solapur': [17.6599, 75.9064],
+        'Moradabad': [28.8386, 78.7733],
+        'Rajkot': [22.3039, 70.8022],
+        'Vapi': [20.3893, 72.9106],
+        'Ghaziabad': [28.6692, 77.4538],
+        'Ichalkaranji': [16.6910, 74.4650],
+        'Muzaffarpur': [26.1209, 85.3647],
+        'Moga': [30.8165, 75.1717],
+        'Puttur': [12.7598, 75.2017],
+        'Rourkela': [22.2604, 84.8536],
+        'Ludhiana': [30.9000, 75.8573],
+        'Burhanpur': [21.3074, 76.2304],
+        'Jamshedpur': [22.8046, 86.2029],
+        'Malappuram': [11.0700, 76.0738],
+        'Thrissur': [10.5276, 76.2142],
+        'Gwalior': [26.2183, 78.1828],
+        'Indore': [22.7196, 75.8577],
+        'Sonipat': [28.9938, 77.0151],
+        'Ajmer': [26.4499, 74.6399],
+        'Karnal': [29.6857, 76.9905],
+        'Mysore': [12.2958, 76.6394],
+        'Allahabad': [25.4358, 81.8463],
+        'Nanded': [19.1383, 77.3210],
+        'Kozhikode': [11.2588, 75.7804],
+        'Kalyan': [19.2437, 73.1355],
+        'Aligarh': [27.8974, 78.0880],
+        'Amritsar': [31.6340, 74.8723],
+        'Kanchrapara': [22.9447, 88.4335],
+        'Gangtok': [27.3389, 88.6065],
+        'Jalandhar': [31.3260, 75.5762],
+        'Krishnanagar': [23.4009, 88.5017],
+        'Rohtak': [28.8955, 76.6066],
+        'Warangal': [17.9784, 79.5941],
+        'Gurgaon': [28.4595, 77.0266],
+        'Vizianagaram': [18.1067, 83.3956],
+        'Ghazipur': [25.5809, 83.5853],
+        'Korba': [22.3595, 82.7501],
+        'Agartala': [23.8315, 91.2868],
+        'Malegaon': [20.5537, 74.5288],
+        'Bhavnagar': [21.7645, 72.1519],
+        'Silchar': [24.8333, 92.7789],
+        'Hisar': [29.1492, 75.7217],
+        'Chikkamagaluru': [13.3167, 75.7754],
+        'Vijayapura': [16.8302, 75.7100],
+        'Solan': [30.9045, 77.0967],
+        'Kanpur': [26.4499, 80.3319],
+        'Bidar': [17.9149, 77.5046],
+        'Jorhat': [26.7465, 94.2026],
+        'Srinagar': [34.0837, 74.7973],
+        'Haldwani': [29.2183, 79.5130],
+        'Malkangiri': [18.3658, 81.8776],
+        'Manipal': [13.3567, 74.7864],
+        'Khammam': [17.2473, 80.1514],
+        'Itanagar': [27.0869, 93.6086],
+        'Azamgarh': [26.0739, 83.1859],
+        'Bellary': [15.1394, 76.9214],
+        'Panaji': [15.4909, 73.8278],
+        'Gaya': [24.7914, 85.0002],
+        'Howrah': [22.5958, 88.2636],
+        'Kakinada': [16.9891, 82.2475],
+        'Faridkot': [30.6782, 74.7550],
+        'Saharanpur': [29.9640, 77.5467],
+        'Tirunelveli': [8.7139, 77.7567],
+        'Rewa': [24.5313, 81.2950],
+        'Jammu': [32.7266, 74.8570],
+        'Satna': [24.5750, 80.8272],
+        'Hoshiarpur': [31.5143, 75.9127],
+        'Jharsuguda': [21.8553, 84.0066],
+        'Gandhinagar': [23.2156, 72.6369],
+        'Pudukkottai': [10.3797, 78.8207],
+        'Bhilwara': [25.3407, 74.6313],
+        'Dibrugarh': [27.4728, 94.9118],
+        'Shillong': [25.5788, 91.8933],
+        'Bhuj': [23.2420, 69.6669],
+        'Chittorgarh': [24.8887, 74.6269],
+        'Haridwar': [29.9457, 78.1642],
+        'Chhindwara': [22.0570, 78.9382],
+        'Angul': [20.8440, 85.1511],
+        'Hanumangarh': [29.5815, 74.3294],
+        'Dimapur': [25.9117, 93.7217],
+        'Palakkad': [10.7867, 76.6548],
+        'Jhansi': [25.4484, 78.5685],
+        'Faridabad': [28.4089, 77.3178],
+        'Berhampur': [19.3149, 84.7941],
+        'Roorkee': [29.8543, 77.8880],
+        'Dwarka': [22.2447, 68.9678],
+        'Karimnagar': [18.4386, 79.1288],
+        'Thanjavur': [10.7860, 79.1378],
+        'Kapurthala': [31.3801, 75.3872],
+        'Thiruvalla': [9.3853, 76.5750],
+        'Sambalpur': [21.4669, 83.9812],
+        'Nizamabad': [18.6722, 78.0941],
+        'Bikaner': [28.0207, 73.3078],
+        'Tezpur': [26.6528, 92.7926],
+        'Rajahmundry': [17.0005, 81.8040],
+        'Ahmednagar': [19.0948, 74.7384],
+        'Cuttack': [20.4625, 85.8828],
+        'Baramati': [18.1517, 74.5777],
+        'Bhilai': [21.1938, 81.3509],
+        'Firozpur': [30.9331, 74.6225],
+        'Tumkur': [13.3392, 77.1022],
+        'Raichur': [16.2000, 77.3463],
+        'Kashipur': [29.2104, 78.9619],
+        'Margao': [15.2832, 73.9862],
+        'Malda': [25.0108, 88.1418],
+        'Zirakpur': [30.6425, 76.8173]
+      };
+
+      const validCities = new Set([
+        'Hyderabad', 'Ahmedabad', 'Erode', 'Kochi', 'Mumbai', 'Pune', 'Chennai', 'Bangalore', 'Bharuch', 'Surat',
+        'Delhi', 'Bhubaneswar', 'Bareilly', 'Jamnagar', 'Varanasi', 'Raipur', 'Kolkata', 'Coimbatore', 'Hubli', 'Thane',
+        'Chandigarh', 'Patna', 'Gandhidham', 'Jaipur', 'Kannur', 'Nagpur', 'Belgaum', 'Secunderabad', 'Guwahati', 'Panipat',
+        'Kottayam', 'Kota', 'Thiruvananthapuram', 'Imphal', 'Patiala', 'Amravati', 'Mangalore', 'Velachery', 'Udupi', 'Vijayawada',
+        'Ganganagar', 'Noida', 'Dehradun', 'Sikar', 'Gorakhpur', 'Nadiad', 'Asansol', 'Sangli', 'Jabalpur', 'Udaipur',
+        'Guntur', 'Bilaspur', 'Pathankot', 'Salem', 'Meerut', 'Dharwad', 'Bathinda', 'Mohali', 'Visakhapatnam', 'Nellore',
+        'Murshidabad', 'Calicut', 'Vadodara', 'Aurangabad', 'Jodhpur', 'Porvorim', 'Tiruchirappalli', 'Dindigul', 'Vellore', 'Ranchi',
+        'Jalgaon', 'Madurai', 'Kolhapur', 'Lucknow', 'Yamuna Nagar', 'Tirupati', 'Nashik', 'Anand', 'Kanchipuram', 'Nagercoil',
+        'Shivamogga', 'Navi Mumbai', 'Gulbarga', 'Ambala', 'Bhopal', 'Latur', 'Pondicherry', 'Siliguri', 'Alwar', 'Thiruvallur',
+        'Kollam', 'Dhanbad', 'Trivandrum', 'Solapur', 'Moradabad', 'Rajkot', 'Vapi', 'Ghaziabad', 'Ichalkaranji', 'Muzaffarpur',
+        'Moga', 'Puttur', 'Rourkela', 'Ludhiana', 'Burhanpur', 'Jamshedpur', 'Malappuram', 'Thrissur', 'Gwalior', 'Indore',
+        'Sonipat', 'Ajmer', 'Bhucho Mandi', 'Karnal', 'Mysore', 'Allahabad', 'Nanded', 'Kozhikode', 'Kalyan', 'Aligarh',
+        'Amritsar', 'Kanchrapara', 'Gangtok', 'Jalandhar', 'Krishnanagar', 'Rohtak', 'Warangal', 'Gurgaon', 'Vizianagaram',
+        'Ghazipur', 'Korba', 'Agartala', 'Malegaon', 'Bhavnagar', 'Silchar', 'Hisar', 'Chikkamagaluru', 'Vijayapura', 'Solan',
+        'Kanpur', 'Bidar', 'Jorhat', 'Srinagar', 'Haldwani', 'Malkangiri', 'Manipal', 'Khammam', 'Itanagar', 'Azamgarh',
+        'Bellary', 'Panaji', 'Gaya', 'Howrah', 'Kakinada', 'Faridkot', 'Saharanpur', 'Tirunelveli', 'Rewa', 'Jammu',
+        'Ghaziabad', 'Satna', 'Hoshiarpur', 'Jharsuguda', 'Nasik', 'Gandhinagar', 'Pudukkottai', 'Bhilwara', 'Dibrugarh',
+        'Shillong', 'Bhuj', 'Chittorgarh', 'Haridwar', 'Chhindwara', 'Angul', 'Hanumangarh', 'Dimapur', 'Palakkad',
+        'Jhansi', 'Faridabad', 'Berhampur', 'Roorkee', 'Dwarka', 'Karimnagar', 'Thanjavur', 'Kapurthala', 'Thiruvalla',
+        'Sambalpur', 'Nizamabad', 'Bikaner', 'Tezpur', 'Rajahmundry', 'Ahmednagar', 'Cuttack', 'Baramati', 'Vijayapura',
+        'Bhilai', 'Firozpur', 'Tumkur', 'Raichur', 'Kashipur', 'Margao', 'Malda', 'Zirakpur'
+      ]);
+
+      const storeMapData = useMemo(() => {
+        const cityStatePairs = [...new Set(filteredData.map(row => row['City'] + '-' + row['State']))];
+        const mappedData = cityStatePairs
+          .map(cityState => {
+            const [city, state] = cityState.split('-');
+            if (!validCities.has(city)) return null;
+            const cityData = filteredData.filter(row => row['City'] === city && row['State'] === state);
+            const avgRating = cityData.reduce((sum, row) => sum + row['Customer Rating'], 0) / cityData.length;
+            const positive = cityData.filter(row => row['Sentiment'] === 'POSITIVE').length;
+            const negative = cityData.filter(row => row['Sentiment'] === 'NEGATIVE').length;
+            const neutral = cityData.filter(row => row['Sentiment'] === 'NEUTRAL').length;
+            let color = '#f59e0b';
+            if (positive > negative && positive >= neutral) color = '#10b981';
+            else if (negative > positive && negative >= neutral) color = '#ef4444';
+            const stores = [...new Set(cityData.map(row => row['Store Code']))];
+            const coordinates = cityCoordinates[city] || [22.0, 78.0];
+            if (!cityCoordinates[city]) {
+              console.warn(`No coordinates for city: ${city}`);
+            }
+            return {
+              city,
+              state,
+              avgRating: avgRating.toFixed(1),
+              volume: cityData.length,
+              color,
+              coordinates,
+              stores: stores.length > 5 ? [...stores.slice(0, 5), '...'] : stores
+            };
+          })
+          .filter(item => item && item.coordinates);
+        console.log('Mapped Cities:', mappedData.map(item => item.city));
+        return mappedData;
+      }, [filteredData]);
+
+      if (loading) {
+        return <div className="text-center text-xl mt-10">Loading...</div>;
+      }
+
+      const FilterDrawer = () => (
+        <div 
+          className={`fixed top-0 left-0 h-full bg-white shadow-lg p-4 w-64 transform ${isFilterOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 overflow-y-auto z-50`} 
+          aria-expanded={isFilterOpen}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold">Filters</h2>
+            <button
+              className="bg-teal-500 text-white p-2 rounded hover:bg-teal-600"
+              onClick={() => setIsFilterOpen(false)}
+            >
+              Hide Filters
+            </button>
+          </div>
+          <div className="space-y-6">
+            <div className="border-b pb-4">
+              <h3 className="font-semibold mb-2">Business Name</h3>
+              <select
+                className="w-full p-2 border rounded"
+                value={filters.businessName}
+                onChange={(e) => handleFilterChange('businessName', e.target.value)}
+              >
+                <option value="">All</option>
+                {filterOptions.businessName.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+            {['zone', 'state', 'city', 'storeCode', 'mallHS', 'sentiment', 'fy', 'month'].map(key => (
+              <div key={key} className="border-b pb-4">
+                <h3 className="font-semibold mb-2 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h3>
+                <input
+                  type="text"
+                  placeholder={`Search ${key}`}
+                  className="w-full p-2 border rounded mb-2"
+                  onChange={(e) => {}}
+                />
+                <div className="max-h-40 overflow-y-auto">
+                  {filterOptions[key].map(value => (
+                    <label key={value} className="flex items-center mb-1">
+                      <input
+                        type="checkbox"
+                        checked={filters[key].includes(value)}
+                        onChange={() => handleFilterChange(key, value)}
+                        className="mr-2"
+                      />
+                      {value}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <button
+              className="w-full bg-red-500 text-white p-2 rounded hover:bg-red-600"
+              onClick={resetFilters}
+            >
+              Reset Filters
+            </button>
           </div>
         </div>
+      );
 
-        <div class="comments-row" style="margin-top:16px">
-          <div class="comment-column card">
-            <h3 style="margin-top:0">Positive Comments (Top 15) – By Date</h3>
-            <div id="positiveComments"></div>
+      const KeyDriversChart = () => {
+        const chartTitle = useMemo(() => {
+          if (filters.sentiment.length === 0) return 'Key Drivers of Customer Feedback (All Sentiments)';
+          if (filters.sentiment.length === 1) {
+            return `Key Drivers of Customer Feedback (${filters.sentiment[0].charAt(0) + filters.sentiment[0].slice(1).toLowerCase()})`;
+          }
+          return 'Key Drivers of Customer Feedback (All Sentiments)';
+        }, [filters.sentiment]);
+
+        const formatXAxis = (name) => {
+          const maxLength = 10;
+          if (name.length <= maxLength) return name;
+          const words = name.split(/(?=[A-Z\s])/);
+          let currentLine = '';
+          const lines = [];
+          words.forEach(word => {
+            if ((currentLine + word).length <= maxLength) {
+              currentLine += word;
+            } else {
+              lines.push(currentLine.trim());
+              currentLine = word;
+            }
+          });
+          if (currentLine) lines.push(currentLine.trim());
+          return lines.join('\n');
+        };
+
+        return (
+          <div className="bg-white p-4 rounded-lg shadow-sm" aria-label="Key Drivers of Customer Feedback Stacked Bar Chart">
+            <h2 className="text-lg font-bold text-blue-800 mb-2">{chartTitle}</h2>
+            <Recharts.ResponsiveContainer width="100%" height={400}>
+              <Recharts.BarChart
+                data={keyDriversData}
+                margin={{ top: 20, right: 20, bottom: 80, left: 20 }}
+                onClick={(data) => {
+                  if (data && data.activePayload) {
+                    const category = data.activePayload[0].payload.name;
+                    setFilters({ ...filters, category: [category] });
+                  }
+                }}
+              >
+                <Recharts.CartesianGrid strokeDasharray="3 3" />
+                <Recharts.XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                  height={80}
+                  fontSize={14}
+                  fill="#1e3a8a"
+                  tickFormatter={formatXAxis}
+                />
+                <Recharts.YAxis domain={yAxisDomain} />
+                <Recharts.Tooltip
+                  formatter={(value, name, props) => {
+                    const { payload } = props;
+                    return [
+                      `${name}: ${value}`,
+                      `Total: ${payload.value}`,
+                      `Positive: ${payload.POSITIVE}`,
+                      `Negative: ${payload.NEGATIVE}`,
+                      `Neutral: ${payload.NEUTRAL}`
+                    ];
+                  }}
+                />
+                <Recharts.Legend align="right" verticalAlign="top" />
+                <Recharts.Bar dataKey="POSITIVE" stackId="a" fill="#10b981">
+                  <Recharts.LabelList
+                    dataKey="value"
+                    position="top"
+                    fill="#000"
+                    style={{
+                      backgroundColor: '#000',
+                      padding: '2px 4px',
+                      borderRadius: '2px',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}
+                    offset={10}
+                  />
+                </Recharts.Bar>
+                <Recharts.Bar dataKey="NEGATIVE" stackId="a" fill="#ef4444" />
+                <Recharts.Bar dataKey="NEUTRAL" stackId="a" fill="#f59e0b" />
+              </Recharts.BarChart>
+            </Recharts.ResponsiveContainer>
           </div>
-          <div class="comment-column card">
-            <h3 style="margin-top:0">Negative Comments (Top 15) – By Date</h3>
-            <div id="negativeComments"></div>
+        );
+      };
+
+      const EmotionCloud = () => (
+        <div className="bg-white p-2 rounded-lg shadow-sm" aria-label="Emotion Bubble Cloud">
+          <h2 className="text-lg font-bold text-blue-800 mb-2">Emotion Bubble Cloud</h2>
+          <div className="grid grid-cols-4 gap-2 w-full">
+            {wordCloudData.map(({ text, color, size, value }, index) => (
+              <div
+                key={text}
+                className="flex items-center justify-center rounded-full max-w-full aspect-[2/1]"
+                style={{ backgroundColor: color, height: `${size}px` }}
+              >
+                <span className="text-white font-bold text-sm truncate">
+                  {text} ({value})
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      );
 
-      <div>
-        <div class="card" style="margin-bottom:16px">
-          <h3>Sentiment Distribution</h3>
-          <div id="pieChart"></div>
+      const SentimentBreakdown = () => {
+        const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage, index }) => {
+          const RADIAN = Math.PI / 180;
+          const radius = outerRadius + 30;
+          const x = cx + radius * Math.cos(-midAngle * RADIAN);
+          const y = cy + radius * Math.sin(-midAngle * RADIAN);
+          return (
+            <text
+              x={x}
+              y={y}
+              fill="#1e3a8a"
+              textAnchor={x > cx ? 'start' : 'end'}
+              dominantBaseline="central"
+              fontSize="12"
+            >
+              {`${percentage}%`}
+            </text>
+          );
+        };
+
+        return (
+          <div className="bg-white p-4 rounded-lg shadow-sm" aria-label="Sentiment Breakdown Pie Chart">
+            <h2 className="text-lg font-bold text-blue-800 mb-2">Sentiment Breakdown</h2>
+            <Recharts.ResponsiveContainer width="100%" height={300}>
+              <Recharts.PieChart>
+                <Recharts.Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  label={renderCustomLabel}
+                  labelLine={true}
+                  onClick={(data) => {
+                    if (data) {
+                      handleFilterChange('sentiment', data.name, true);
+                    }
+                  }}
+                >
+                  {pieData.map((entry, index) => (
+                    <Recharts.Cell
+                      key={`cell-${index}`}
+                      fill={entry.name === 'POSITIVE' ? '#10b981' : entry.name === 'NEGATIVE' ? '#ef4444' : '#f59e0b'}
+                    />
+                  ))}
+                </Recharts.Pie>
+                <Recharts.Legend verticalAlign="bottom" />
+                <Recharts.Tooltip formatter={(value, name) => `Sentiment: ${value} responses`} />
+              </Recharts.PieChart>
+            </Recharts.ResponsiveContainer>
+          </div>
+        );
+      };
+
+      const StoreMap = () => {
+        const mapRef = useRef(null);
+        const mapContainerRef = useRef(null);
+
+        useEffect(() => {
+          if (mapRef.current) return;
+          mapRef.current = L.map(mapContainerRef.current, {
+            center: [22.0, 78.0],
+            zoom: 5,
+            minZoom: 5,
+            maxZoom: 18,
+            zoomControl: true,
+            scrollWheelZoom: true,
+            dragging: true
+          });
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+            tileSize: 256
+          }).addTo(mapRef.current);
+
+          storeMapData.forEach(({ city, state, avgRating, volume, color, coordinates, stores }) => {
+            L.circleMarker(coordinates, {
+              radius: 10,
+              fillColor: color,
+              color: '#000',
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.8
+            })
+              .addTo(mapRef.current)
+              .bindPopup(`${city}<br>Stores: ${stores.join(', ')}<br>Avg Rating: ${avgRating}<br>Feedback Volume: ${volume}`);
+          });
+
+          const legend = L.control({ position: 'bottomleft' });
+          legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'bg-white p-2 rounded shadow');
+            div.innerHTML = `
+              <div><span style="display:inline-block;width:12px;height:12px;background:#10b981;margin-right:4px;"></span>Mostly Positive</div>
+              <div><span style="display:inline-block;width:12px;height:12px;background:#ef4444;margin-right:4px;"></span>Mostly Negative</div>
+              <div><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;margin-right:4px;"></span>Mostly Neutral</div>
+            `;
+            return div;
+          };
+          legend.addTo(mapRef.current);
+
+          return () => {
+            if (mapRef.current) {
+              mapRef.current.remove();
+              mapRef.current = null;
+            }
+          };
+        }, [storeMapData]);
+
+        return (
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h2 className="text-lg font-bold text-blue-800 mb-2">Mapped Cities with Store Feedback Sentiment – India</h2>
+            <div ref={mapContainerRef} style={{ height: '400px', width: '100%' }}></div>
+          </div>
+        );
+      };
+
+      return (
+        <div className="p-6 w-full">
+          {!isFilterOpen && (
+            <button
+              className="fixed top-4 left-4 bg-teal-500 text-white p-2 rounded hover:bg-teal-600 z-50"
+              onClick={() => setIsFilterOpen(true)}
+              aria-label="Show Filters"
+            >
+              Show Filters
+            </button>
+          )}
+          <button
+            className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded hover:bg-red-600 z-50"
+            onClick={resetFilters}
+            aria-label="Reset Dashboard"
+          >
+            Reset Dashboard
+          </button>
+          <FilterDrawer />
+          <h1 className="text-2xl font-bold mb-6 text-center">CX – Voice of Customer Dashboard | Google Reviews</h1>
+
+          <div className="mb-8">
+            <h2 className="text-xl font-bold mb-4">Top Insights</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg shadow">
+                <p className="text-base text-gray-700">
+                  1. Top Feedback Theme: "{keyDriversData[0]?.name || 'N/A'}" mentions. This theme received "{keyDriversData[0]?.value || 0}" mentions amongst which "{categorySentimentCounts[keyDriversData[0]?.name]?.NEGATIVE || 0}" mentions were negative and "{categorySentimentCounts[keyDriversData[0]?.name]?.POSITIVE || 0}" mentions were positive.
+                </p>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-lg shadow">
+                <p className="text-base text-gray-700">2. {worstZone.zone.replace(/^Zone\s*/, '')} saw a drop in satisfaction with an avg. rating of {worstZone.avgRating}, driven by negative sentiment around {topComplaintCategory[0]}.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white p-4 rounded-lg shadow-sm text-center">
+              <h3 className="text-lg font-bold text-blue-800">Total Reviews</h3>
+              <p className="text-3xl text-green-600">{totalReviews}</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm text-center">
+              <h3 className="text-lg font-bold text-blue-800">% Negative</h3>
+              <p className="text-3xl text-red-600">{percentNegative}%</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm text-center">
+              <h3 className="text-lg font-bold text-blue-800">Best Store</h3>
+              <p className="text-3xl text-green-600">{bestStore.store} ({bestStore.avgRating})</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm text-center">
+              <h3 className="text-lg font-bold text-blue-800">Lowest Rated</h3>
+              <p className="text-3xl text-red-600">{lowestRated.store} ({lowestRated.avgRating})</p>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <KeyDriversChart />
+          </div>
+          <div className="mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <EmotionCloud />
+              <SentimentBreakdown />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div className="bg-white p-4 rounded shadow">
+              <h2 className="text-lg font-bold text-blue-800 mb-2">Sentiment by Zone</h2>
+              <Recharts.ResponsiveContainer width="100%" height={300}>
+                <Recharts.BarChart data={zoneSentimentData}>
+                  <Recharts.CartesianGrid strokeDasharray="3 3" />
+                  <Recharts.XAxis dataKey="zone" />
+                  <Recharts.YAxis />
+                  <Recharts.Tooltip />
+                  <Recharts.Legend />
+                  <Recharts.Bar dataKey="POSITIVE" fill="#10b981" />
+                  <Recharts.Bar dataKey="NEGATIVE" fill="#ef4444" />
+                  <Recharts.Bar dataKey="NEUTRAL" fill="#f59e0b" />
+                </Recharts.BarChart>
+              </Recharts.ResponsiveContainer>
+            </div>
+            <div className="bg-white p-4 rounded shadow">
+              <h2 className="text-lg font-bold text-blue-800 mb-2">Sentiment Trend Over Time</h2>
+              <Recharts.ResponsiveContainer width="100%" height={300}>
+                <Recharts.LineChart data={trendData}>
+                  <Recharts.CartesianGrid strokeDasharray="3 3" />
+                  <Recharts.XAxis dataKey="month" />
+                  <Recharts.YAxis />
+                  <Recharts.Tooltip />
+                  <Recharts.Legend />
+                  <Recharts.Line type="monotone" dataKey="POSITIVE" stroke="#10b981" />
+                  <Recharts.Line type="monotone" dataKey="NEGATIVE" stroke="#ef4444" />
+                  <Recharts.Line type="monotone" dataKey="NEUTRAL" stroke="#f59e0b" />
+                </Recharts.LineChart>
+              </Recharts.ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <h2 className="text-lg font-bold text-blue-800 mb-2">Key Feedback Drivers Across Top 10 Stores</h2>
+              <div className="flex justify-center mb-4">
+                <span className="mr-4"><span className="inline-block w-4 h-4 bg-teal-500 mr-1"></span>Positive (↑)</span>
+                <span className="mr-4"><span className="inline-block w-4 h-4 bg-red-500 mr-1"></span>Negative (↓)</span>
+                <span className="mr-4"><span className="inline-block w-4 h-4 bg-yellow-500 mr-1"></span>Neutral (↔)</span>
+                <span><span className="inline-block w-4 h-4 bg-gray-400 mr-1"></span>No Feedback (-)</span>
+              </div>
+              <div className="w-full">
+                <table className="w-full text-sm border border-gray-300 shadow-sm">
+                  <thead>
+                    <tr>
+                      <th className="p-3 border border-gray-300 text-center font-semibold">Store</th>
+                      {categories.map(cat => (
+                        <th key={cat} className="p-3 border border-gray-300 text-center whitespace-pre">{shortLabels[cat]}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {heatmapData.map(row => (
+                      <tr key={row.store}>
+                        <td className="p-3 border border-gray-300 font-semibold text-left">{row.store}</td>
+                        {categories.map(cat => (
+                          <td
+                            key={cat}
+                            className="p-3 border border-gray-300 text-center cursor-pointer hover:bg-gray-100"
+                            style={{ backgroundColor: row[cat].color }}
+                            title={row[cat].sampleComment}
+                            onClick={() => {
+                              setFilters({
+                                ...filters,
+                                storeCode: [row.store],
+                                category: [cat]
+                              });
+                            }}
+                          >
+                            <span style={{ color: row[cat].sentiment === 'POSITIVE' ? 'white' : 'black' }}>
+                              {row[cat].count > 0 ? `${row[cat].count} ${row[cat].arrow}` : row[cat].arrow}
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <StoreMap />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <h2 className="text-lg font-bold text-blue-800 mb-2">Positive Comments (Top 15) – By Date</h2>
+              <div className="max-h-96 overflow-y-auto">
+                {filteredData
+                  .filter(row => row['Sentiment'] === 'POSITIVE')
+                  .sort((a, b) => new Date(b['Comment Date']) - new Date(a['Comment Date']))
+                  .slice(0, 15)
+                  .map((row, index) => (
+                    <div key={index} className="border-b last:border-b-0 py-2">
+                      <p className="font-bold">😊 {row['Customer Response']}</p>
+                      <p className="text-sm text-gray-600">Store: {row['Store Code']} | Date: {formatDate(row['Comment Date'])}</p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <h2 className="text-lg font-bold text-blue-800 mb-2">Negative Comments (Top 15) – By Date</h2>
+              <div className="max-h-96 overflow-y-auto">
+                {filteredData
+                  .filter(row => row['Sentiment'] === 'NEGATIVE')
+                  .sort((a, b) => new Date(b['Comment Date']) - new Date(a['Comment Date']))
+                  .slice(0, 15)
+                  .map((row, index) => (
+                    <div key={index} className="border-b last:border-b-0 py-2">
+                      <p className="font-bold">😠 {row['Customer Response']}</p>
+                      <p className="text-sm text-gray-600">Store: {row['Store Code']} | Date: {formatDate(row['Comment Date'])}</p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
         </div>
+      );
+    };
 
-        <div class="card" style="margin-bottom:16px">
-          <h3>Sentiment Trend Over Time (APR → MAY → JUN)</h3>
-          <div id="lineChart"></div>
-        </div>
-
-        <div class="card">
-          <h3>Sentiment by Zone</h3>
-          <div id="zoneChart"></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script>
-/* ========== Config ========== */
-const API_URLS = [
-  "https://raw.githubusercontent.com/Harishbose/voc-dashboard/main/reviews.json"
-];
-const MONTH_ORDER = ['APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC','JAN','FEB','MAR'];
-const SENT_COLORS = { Positive: getComputedStyle(document.documentElement).getPropertyValue('--positive').trim() || '#10b981', Negative: getComputedStyle(document.documentElement).getPropertyValue('--negative').trim() || '#ef4444', Neutral: getComputedStyle(document.documentElement).getPropertyValue('--neutral').trim() || '#f59e0b' };
-
-/* ========== state ========== */
-let state = {
-  rawData: [],
-  data: [],
-  filters: {
-    businessName: null,
-    zones: new Set(),
-    states: new Set(),
-    cities: new Set(),
-    stores: new Set(),
-    mallTypes: new Set(),
-    sentiments: new Set(),
-    fys: new Set(),
-    quarters: new Set(),
-    months: new Set()
-  },
-  derived: {}
-};
-
-/* ===== helpers ===== */
-const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-function uniq(arr){ return Array.from(new Set(arr.map(x=>x===null?'':x))).filter(x=>x!=='').sort(); }
-function looksLikeDate(s){
-  if(!s) return false;
-  return /^\d{4}-\d{2}-\d{2}/.test(s) || /\d{2}\/\d{2}\/\d{4}/.test(s) || /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s);
-}
-function formatDate(d){
-  if(!d) return 'N/A';
-  const D = new Date(d);
-  if(isNaN(D)) return d;
-  return (D.getMonth()+1).toString().padStart(2,'0') + '/' + D.getDate().toString().padStart(2,'0') + '/' + D.getFullYear();
-}
-function sentimentScore(s){ if(s==='Positive') return 1; if(s==='Negative') return -1; return 0; }
-
-/* small heuristics */
-function detectEmotions(text){
-  if(!text) return [];
-  const t = text.toLowerCase();
-  const em=[];
-  if(/thank|thanks|gratef|appreciat|love|😊/.test(t)) em.push('Gratitude');
-  if(/angry|hate|annoy|furious|😠|mad|rage|terrible|awful|worst/.test(t)) em.push('Frustration');
-  if(/happy|great|excellent|pleased|satisfied/.test(t)) em.push('Satisfaction');
-  if(/disappointed|sad|upset|not happy|disappoint/.test(t)) em.push('Disappointment');
-  if(/confused|unclear|unsure/.test(t)) em.push('Confusion');
-  if(/joy|happy/.test(t) && !em.includes('Satisfaction')) em.push('Joy');
-  return em;
-}
-function classifyImprovementCategory(text){
-  if(!text) return 'Miscellaneous';
-  const t = text.toLowerCase();
-  const m = arr => arr.some(k=>t.includes(k));
-  if(m(['staff','service','salesman','experience','assistance','interaction'])) return 'Store Experience';
-  if(m(['quality','material','product','durability','defect','faulty'])) return 'Product Quality';
-  if(m(['collection','variety','size','available','stock','availability'])) return 'Inventory Management';
-  if(m(['price','cost','expensive','discount','deal','value'])) return 'Pricing & Discounts';
-  if(m(['return','exchange','refund','policy','returnable'])) return 'Return & Refund Policies';
-  if(m(['support','help','assistance','responsive','query','resolution'])) return 'Customer Support';
-  if(m(['promotion','offer','loyalty','deal','coupon','reward'])) return 'Promotions & Offers';
-  if(m(['billing','payment','charge','invoice','transaction'])) return 'Billing & Payment Issues';
-  if(m(['behaviour','rude','polite','attitude','courtesy','professionalism'])) return 'Staff Behaviour';
-  if(m(['wait','queue','delay','slow','line','turnaround'])) return 'Wait Time / Queue Management';
-  return 'Miscellaneous';
-}
-
-/* ========== Data load ========== */
-async function loadReviewData(){
-  for(const url of API_URLS){
-    try{
-      const res = await fetch(url);
-      if(!res.ok) continue;
-      const data = await res.json();
-      if(Array.isArray(data) && data.length>0) return data;
-    }catch(e){ console.warn('load fail', e) }
-  }
-  alert('Could not load data from backend. Check raw JSON.');
-  return [];
-}
-
-/* normalization */
-function normalizeRecord(r){
-  const rec = {};
-  rec.rating = (r.rating!==undefined && r.rating!==null && !isNaN(Number(r.rating))) ? Number(r.rating) : (r['Google Rating'] ? Number(r['Google Rating']):0);
-  rec.storeCode = r.storeCode || r['storeCode'] || r['Store Name'] || r['store'] || '';
-  rec.mallType = r.mallType || r['mallType'] || r['Mall/HS'] || r['mall'] || '';
-  rec.businessName = r.businessName || r['businessName'] || r['Brand'] || r['brand'] || '';
-  rec.zone = r.zone || r['zone'] || '';
-  rec.state = r.state || r['state'] || '';
-  rec.city = r.city || r['city'] || '';
-  rec.commentDate = r.commentDate || r['commentDate'] || r['Comment Date'] || '';
-  rec.month = (r.month || r['month'] || '').toString().toUpperCase();
-  rec.quarter = r.quarter || r['quarter'] || '';
-  rec.fy = r.fy || r['fy'] || r['Financial Year'] || '';
-  rec.sentiment = (r.sentiment || r['sentiment'] || 'Neutral').toString();
-  let commentText = r.comment || r['comment'] || r['Customer Response'] || r.responseType || r['responseType'] || '';
-  // if the comment looks like a date/time fallback to responseType if available
-  if(looksLikeDate(String(commentText)) && r.responseType && r.responseType.length>2) commentText = r.responseType;
-  rec.comment = commentText || '';
-  rec.__raw = r;
-  return rec;
-}
-
-/* derived lists */
-function refreshDerivedLists(all){
-  state.derived.businessNames = uniq(all.map(r=>r.businessName));
-  state.derived.zones = uniq(all.map(r=>r.zone));
-  state.derived.states = uniq(all.map(r=>r.state));
-  state.derived.cities = uniq(all.map(r=>r.city));
-  state.derived.stores = uniq(all.map(r=>r.storeCode));
-  state.derived.mallTypes = uniq(all.map(r=>r.mallType));
-  state.derived.fys = uniq(all.map(r=>r.fy)).reverse();
-  state.derived.quarters = uniq(all.map(r=>r.quarter));
-  state.derived.months = uniq(all.map(r=>r.month)).filter(x=>MONTH_ORDER.includes(x)).sort((a,b)=> MONTH_ORDER.indexOf(a)-MONTH_ORDER.indexOf(b));
-}
-
-/* cascading allowed lists */
-function cascadeAllowed(){
-  const base = state.rawData;
-  const f = state.filters;
-  const allowedStates = new Set(), allowedCities = new Set(), allowedStores = new Set();
-  base.forEach(r=>{
-    if(f.zones.size===0 || f.zones.has(r.zone)) allowedStates.add(r.state);
-  });
-  base.forEach(r=>{
-    if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state))) allowedCities.add(r.city);
-  });
-  base.forEach(r=>{
-    if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state)) && (f.cities.size===0 || f.cities.has(r.city))) allowedStores.add(r.storeCode);
-  });
-  state.derived.allowedStates = Array.from(allowedStates).sort();
-  state.derived.allowedCities = Array.from(allowedCities).sort();
-  state.derived.allowedStores = Array.from(allowedStores).sort();
-}
-
-/* apply filters */
-function applyFilters(){
-  const f = state.filters;
-  let data = state.rawData.slice();
-  if(f.businessName) data = data.filter(r=> r.businessName === f.businessName);
-  if(f.zones.size) data = data.filter(r=> f.zones.has(r.zone));
-  if(f.states.size) data = data.filter(r=> f.states.has(r.state));
-  if(f.cities.size) data = data.filter(r=> f.cities.has(r.city));
-  if(f.stores.size) data = data.filter(r=> f.stores.has(r.storeCode));
-  if(f.mallTypes.size) data = data.filter(r=> f.mallTypes.has(r.mallType));
-  if(f.sentiments.size) data = data.filter(r=> f.sentiments.has(r.sentiment));
-  if(f.fys.size) data = data.filter(r=> f.fys.has(r.fy));
-  if(f.quarters.size) data = data.filter(r=> f.quarters.has(r.quarter));
-  if(f.months.size) data = data.filter(r=> f.months.has(r.month));
-  state.data = data;
-}
-
-/* ================= Render controls ================= */
-
-function renderFilterControls(){
-  cascadeAllowed();
-  // business radio
-  const bwrap = document.getElementById('businessNameWrap'); bwrap.innerHTML='';
-  state.derived.businessNames.forEach(name=>{
-    const id = 'bn_'+name.replace(/\s+/g,'_');
-    const checked = (state.filters.businessName === name) ? 'checked' : '';
-    const div = document.createElement('div'); div.style.marginBottom='6px';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="radio" name="businessName" ${checked} value="${esc(name)}"> <span>${esc(name)}</span></label>`;
-    bwrap.appendChild(div);
-  });
-
-  // zones
-  const zwrap = document.getElementById('zoneWrap'); zwrap.innerHTML='';
-  state.derived.zones.forEach(z=>{
-    const div = document.createElement('div');
-    const checked = state.filters.zones.has(z) ? 'checked' : '';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(z)}" class="zone-checkbox" ${checked}/> ${esc(z)}</label>`;
-    zwrap.appendChild(div);
-  });
-
-  // states
-  const swrap = document.getElementById('stateWrap'); swrap.innerHTML='';
-  (state.derived.allowedStates.length ? state.derived.allowedStates : state.derived.states).forEach(s=>{
-    const div = document.createElement('div');
-    const checked = state.filters.states.has(s) ? 'checked' : '';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(s)}" class="state-checkbox" ${checked}/> ${esc(s)}</label>`;
-    swrap.appendChild(div);
-  });
-
-  // cities
-  const cwrap = document.getElementById('cityWrap'); cwrap.innerHTML='';
-  (state.derived.allowedCities.length ? state.derived.allowedCities : state.derived.cities).forEach(c=>{
-    const div = document.createElement('div');
-    const checked = state.filters.cities.has(c) ? 'checked' : '';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(c)}" class="city-checkbox" ${checked}/> ${esc(c)}</label>`;
-    cwrap.appendChild(div);
-  });
-
-  // stores
-  const stwrap = document.getElementById('storeWrap'); stwrap.innerHTML='';
-  (state.derived.allowedStores.length ? state.derived.allowedStores : state.derived.stores).forEach(s=>{
-    const div = document.createElement('div');
-    const checked = state.filters.stores.has(s) ? 'checked' : '';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(s)}" class="store-checkbox" ${checked}/> ${esc(s)}</label>`;
-    stwrap.appendChild(div);
-  });
-
-  // mall types
-  const mwrap = document.getElementById('mallWrap'); mwrap.innerHTML='';
-  state.derived.mallTypes.forEach(m=>{
-    const div = document.createElement('div');
-    const checked = state.filters.mallTypes.has(m) ? 'checked' : '';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(m)}" class="mall-checkbox" ${checked}/> ${esc(m)}</label>`;
-    mwrap.appendChild(div);
-  });
-
-  // sentiment
-  const sentWrap = document.getElementById('sentimentWrap'); sentWrap.innerHTML='';
-  ['Positive','Neutral','Negative'].forEach(s=>{
-    const checked = state.filters.sentiments.has(s) ? 'checked' : '';
-    const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(s)}" class="sent-checkbox" ${checked}/> ${s}</label>`;
-    sentWrap.appendChild(div);
-  });
-
-  // FY
-  const fyw = document.getElementById('fyWrap'); fyw.innerHTML='';
-  state.derived.fys.forEach(fy=>{
-    const checked = state.filters.fys.has(fy) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(fy)}" class="fy-checkbox" ${checked}/> ${esc(fy)}</label>`;
-    fyw.appendChild(div);
-  });
-
-  // quarters
-  const qw = document.getElementById('quarterWrap'); qw.innerHTML='';
-  state.derived.quarters.forEach(q=>{
-    const checked = state.filters.quarters.has(q) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(q)}" class="q-checkbox" ${checked}/> ${esc(q)}</label>`;
-    qw.appendChild(div);
-  });
-
-  // months
-  const mw = document.getElementById('monthWrap'); mw.innerHTML='';
-  MONTH_ORDER.forEach(m=>{
-    if(state.derived.months.includes(m)){
-      const checked = state.filters.months.has(m) ? 'checked' : '';
-      const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${esc(m)}" class="m-checkbox" ${checked}/> ${esc(m)}</label>`;
-      mw.appendChild(div);
-    }
-  });
-
-  attachFilterListeners();
-}
-
-function attachFilterListeners(){
-  document.querySelectorAll('input[name="businessName"]').forEach(r=>{
-    r.addEventListener('change', e=>{
-      state.filters.businessName = e.target.value;
-    });
-  });
-  document.querySelectorAll('.zone-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.zones.add(v); else state.filters.zones.delete(v);
-    });
-  });
-  document.querySelectorAll('.state-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.states.add(v); else state.filters.states.delete(v);
-      renderFilterControls();
-    });
-  });
-  document.querySelectorAll('.city-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.cities.add(v); else state.filters.cities.delete(v);
-      renderFilterControls();
-    });
-  });
-  document.querySelectorAll('.store-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.stores.add(v); else state.filters.stores.delete(v);
-    });
-  });
-  document.querySelectorAll('.mall-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.mallTypes.add(v); else state.filters.mallTypes.delete(v);
-    });
-  });
-  document.querySelectorAll('.sent-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.sentiments.add(v); else state.filters.sentiments.delete(v);
-    });
-  });
-  document.querySelectorAll('.fy-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.fys.add(v); else state.filters.fys.delete(v);
-    });
-  });
-  document.querySelectorAll('.q-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.quarters.add(v); else state.filters.quarters.delete(v);
-    });
-  });
-  document.querySelectorAll('.m-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const v = e.target.dataset.val;
-      if(e.target.checked) state.filters.months.add(v); else state.filters.months.delete(v);
-    });
-  });
-
-  // search boxes
-  document.getElementById('stateSearch').addEventListener('input', e=>{
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#stateWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
-  document.getElementById('citySearch').addEventListener('input', e=>{
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#cityWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
-  document.getElementById('storeSearch').addEventListener('input', e=>{
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#storeWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
-}
-
-/* ========== KPIs & Insights ========== */
-function renderKPIsAndInsights(){
-  const data = state.data;
-  const total = data.length;
-  const negatives = data.filter(d=>d.sentiment==='Negative').length;
-  const negPct = total ? ((negatives/total)*100).toFixed(1) + '%' : '0%';
-  document.getElementById('kpiTotal').textContent = total;
-  document.getElementById('kpiNegative').textContent = negPct;
-
-  // Best/Worst store logic using weighted score
-  const byStore = {};
-  state.rawData.forEach(r=>{
-    if(!byStore[r.storeCode]) byStore[r.storeCode] = {sum:0,count:0};
-    byStore[r.storeCode].sum += Number(r.rating||0);
-    byStore[r.storeCode].count++;
-  });
-  const storeStats = Object.entries(byStore).map(([k,v])=>{
-    const avg = v.count ? v.sum / v.count : 0;
-    const weighted = avg * Math.log(1 + v.count); // weighted score
-    return {store:k,avg, count:v.count, weighted};
-  }).filter(s=>s.store && s.count>0);
-
-  storeStats.sort((a,b)=> b.weighted - a.weighted);
-  const best = storeStats[0] || null;
-  const worst = storeStats.sort((a,b)=>a.avg-b.avg)[0] || null;
-  document.getElementById('kpiBest').textContent = best ? `${best.store} (${best.avg.toFixed(2)} / ${best.count})` : '—';
-  document.getElementById('kpiWorst').textContent = worst ? `${worst.store} (${worst.avg.toFixed(2)} / ${worst.count})` : '—';
-
-  // Strategic insights (6 cards)
-  const grid = document.getElementById('insightsGrid'); grid.innerHTML='';
-  const auto = generateTopInsights();
-  const strategic = generateStrategicInsights(state.data);
-  const all = [...auto, ...strategic];
-  all.slice(0,6).forEach(card=>{
-    const el = document.createElement('div'); el.className='insight-card';
-    el.innerHTML = `<h4 style="margin:0 0 6px 0">${esc(card.headline)}</h4><p class="muted" style="margin:0">${esc(card.description)}</p>`;
-    grid.appendChild(el);
-  });
-}
-
-function generateTopInsights(){
-  // produce 3 AI-style cards but not "AI language" — use heuristics
-  const data = state.data;
-  const categories = {};
-  data.forEach(r=>{
-    const c = classifyImprovementCategory(r.comment);
-    if(c==='Miscellaneous') return;
-    categories[c] = (categories[c]||0)+1;
-  });
-  const sorted = Object.entries(categories).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
-  const top = sorted[0] || null;
-  const cards = [];
-  if(top) cards.push({ headline: 'Store Experience Dominates', description: `This was the most mentioned theme, appearing in ${Math.round(top.v)} reviews. It's the key driver of praise and criticism.` });
-  cards.push({ headline: 'Top Cities by Volume', description: (()=>{ const cm = {}; state.data.forEach(r=>cm[r.city]=(cm[r.city]||0)+1); const topCities = Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(', '); return topCities || 'N/A'; })() });
-  return cards;
-}
-
-function generateStrategicInsights(data){
-  // produce 4 more cards similar to earlier
-  // zone dip, underperformers, uptick, leading store
-  const categories = {};
-  data.forEach(r=>{ const c = classifyImprovementCategory(r.comment); if(c==='Miscellaneous') return; categories[c] = (categories[c]||0)+1; });
-  const total = Object.values(categories).reduce((a,b)=>a+b,0) || 1;
-  const sortedCats = Object.entries(categories).map(([k,v])=>({k,v, percent: v/total*100})).sort((a,b)=>b.v-a.v);
-  const theme = sortedCats[0] ? sortedCats[0].k : 'Store Experience';
-  const themePct = sortedCats[0] ? Math.round(sortedCats[0].percent) : 0;
-
-  const zoneStats = {};
-  data.forEach(r=>{ if(!zoneStats[r.zone]) zoneStats[r.zone] = {sum:0,count:0,neg:0}; zoneStats[r.zone].sum += r.rating; zoneStats[r.zone].count++; if(r.sentiment==='Negative') zoneStats[r.zone].neg++; });
-  const zoneArr = Object.entries(zoneStats).map(([z,v])=>({zone:z,avg:v.count? v.sum/v.count:0, negPct: v.count? v.neg/v.count*100:0 })).sort((a,b)=>b.negPct-a.negPct);
-  const topZone = zoneArr[0] || {zone:'N/A', avg:0, negPct:0};
-
-  const storeMap = {};
-  data.forEach(r=>{ if(!storeMap[r.storeCode]) storeMap[r.storeCode] = {sum:0,count:0,neg:0}; storeMap[r.storeCode].sum += r.rating; storeMap[r.storeCode].count++; if(r.sentiment==='Negative') storeMap[r.storeCode].neg++; });
-  const underperformers = Object.entries(storeMap).map(([s,v])=>({store:s,avg:v.sum/v.count,negPct:v.count? v.neg/v.count*100:0,count:v.count})).filter(x=>x.avg<=4).sort((a,b)=>a.avg-b.avg).slice(0,5).map(x=>x.store);
-  const underText = underperformers.length ? underperformers.join(', ') : 'N/A';
-
-  // positive momentum
-  const today = new Date();
-  const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
-  const last30 = data.filter(r=> new Date(r.commentDate) >= daysAgo(30));
-  const prev30 = data.filter(r=> new Date(r.commentDate) < daysAgo(30) && new Date(r.commentDate) >= daysAgo(60));
-  const posLast = last30.filter(r=>r.sentiment==='Positive').length;
-  const posPrev = prev30.filter(r=>r.sentiment==='Positive').length;
-  const posPctChange = posPrev ? Math.round(((posLast-posPrev)/posPrev)*100) : (posLast?100:0);
-
-  const cityMap = {}; data.forEach(r=> cityMap[r.city] = (cityMap[r.city]||0)+1);
-  const topCities = Object.entries(cityMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(', ') || 'N/A';
-
-  const best = Object.entries(storeMap).map(([s,v])=>({s,avg:v.sum/v.count})).sort((a,b)=>b.avg-a.avg)[0];
-  const bestText = best ? `${best.s} (${best.avg.toFixed(2)})` : 'N/A';
-
-  return [
-    { headline: `${theme} is Key`, description: `Top theme: ${theme} (${themePct}%) — focus here for improvement.` },
-    { headline: `${topZone.zone} Zone Sentiment Dip`, description: `Average rating ${topZone.avg.toFixed(1)}, higher negative share.` },
-    { headline: `Stores needing Attention`, description: `Underperformers: ${underText}` },
-    { headline: `Uptick in Positive Feedback`, description: `${posPctChange}% change in positive reviews recently.` },
-  ];
-}
-
-/* ========== Render Charts & Panels ========== */
-
-function renderDriversChart(){
-  const data = state.data;
-  const categories = {};
-  data.forEach(r=>{ const c = classifyImprovementCategory(r.comment); if(c==='Miscellaneous') return; categories[c] = (categories[c]||0)+1; });
-  const arr = Object.entries(categories).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
-  const total = arr.reduce((a,b)=>a+b.v,0) || 1;
-  let others = 0;
-  const filtered = arr.filter(item=> {
-    if(item.v/total < 0.05){ others += item.v; return false; }
-    return true;
-  });
-  if(others) filtered.push({k:'Miscellaneous/Others', v:others});
-  filtered.sort((a,b)=>b.v-a.v);
-
-  const pillWrap = document.getElementById('driverPills'); pillWrap.innerHTML='';
-  filtered.forEach(item=>{
-    const p = document.createElement('div'); p.className='pill'; p.textContent = `${item.k} (${item.v})`;
-    pillWrap.appendChild(p);
-  });
-
-  const chart = document.getElementById('driversChart');
-  chart.innerHTML = '';
-  const width = chart.clientWidth || 720;
-  const height = Math.max(120, filtered.length*36);
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('width','100%'); svg.setAttribute('height', height);
-  const max = Math.max(...filtered.map(f=>f.v),1);
-  filtered.forEach((f,i)=>{
-    const y = i*36 + 12;
-    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x',10); label.setAttribute('y', y+14); label.setAttribute('font-size','12'); label.setAttribute('fill','#0b1220'); label.textContent = f.k;
-    svg.appendChild(label);
-    const barW = Math.round((f.v/max) * (width - 220));
-    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',200); rect.setAttribute('y', y+2); rect.setAttribute('width', barW); rect.setAttribute('height',18); rect.setAttribute('rx',8); rect.setAttribute('fill','rgba(16,185,129,0.15)');
-    svg.appendChild(rect);
-    const inner = document.createElementNS(svgNS,'rect'); inner.setAttribute('x',200); inner.setAttribute('y', y+2); inner.setAttribute('width', Math.max(8, barW*0.98)); inner.setAttribute('height',18); inner.setAttribute('rx',8); inner.setAttribute('fill','#10b981');
-    svg.appendChild(inner);
-    const val = document.createElementNS(svgNS,'text'); val.setAttribute('x', 200 + barW + 10); val.setAttribute('y', y+15); val.setAttribute('font-size','12'); val.setAttribute('fill','#0b1220'); val.setAttribute('font-weight','700'); val.textContent = f.v;
-    svg.appendChild(val);
-  });
-  chart.appendChild(svg);
-}
-
-/* pie chart */
-function renderSentimentPie(){
-  const counts = {Positive:0, Neutral:0, Negative:0};
-  state.data.forEach(d=> counts[d.sentiment] = (counts[d.sentiment]||0) + 1);
-  const total = counts.Positive + counts.Neutral + counts.Negative || 1;
-  const el = document.getElementById('pieChart'); el.innerHTML='';
-  // using simple canvas to avoid external libs
-  const canvas = document.createElement('canvas'); canvas.width = 360; canvas.height = 220;
-  const ctx = canvas.getContext('2d');
-  let start = -Math.PI/2;
-  const radius = 80;
-  const cx = 110, cy = 110;
-  const slices = [['Positive', counts.Positive, SENT_COLORS.Positive], ['Neutral', counts.Neutral, SENT_COLORS.Neutral], ['Negative', counts.Negative, SENT_COLORS.Negative]];
-  slices.forEach(([k,v,color])=>{
-    const slice = (v/total) * (Math.PI*2);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, radius, start, start + slice);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    start += slice;
-  });
-  el.appendChild(canvas);
-  // legend
-  const legend = document.createElement('div'); legend.style.marginLeft='8px'; legend.style.display='inline-block'; legend.style.verticalAlign='top';
-  [['Positive',counts.Positive,SENT_COLORS.Positive],['Neutral',counts.Neutral,SENT_COLORS.Neutral],['Negative',counts.Negative,SENT_COLORS.Negative]].forEach(([k,v,color])=>{
-    const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='10px'; row.style.margin='8px 0';
-    const sw = document.createElement('div'); sw.style.width='14px'; sw.style.height='14px'; sw.style.borderRadius='6px'; sw.style.background = color;
-    const label = document.createElement('div'); label.innerHTML = `<strong style="font-weight:700">${k}</strong> — ${(v/total*100).toFixed(1)}% (${v})`; label.style.color='#0b1220';
-    row.appendChild(sw); row.appendChild(label); legend.appendChild(row);
-  });
-  el.appendChild(legend);
-}
-
-/* line chart APR MAY JUN static points with hover */
-function renderLineChart(){
-  // compute counts for APR, MAY, JUN
-  const months = ['APR','MAY','JUN'];
-  const counts = { 'APR': {Positive:0,Negative:0,Neutral:0}, 'MAY': {Positive:0,Negative:0,Neutral:0}, 'JUN': {Positive:0,Negative:0,Neutral:0} };
-  state.data.forEach(r=>{
-    if(months.includes(r.month)){
-      counts[r.month][r.sentiment] = (counts[r.month][r.sentiment]||0) + 1;
-    }
-  });
-  const points = months.map(m=> ({ month:m, pos:counts[m].Positive, neg:counts[m].Negative, neu:counts[m].Neutral, total: counts[m].Positive + counts[m].Negative + counts[m].Neutral }));
-  // draw svg
-  const chart = document.getElementById('lineChart'); chart.innerHTML='';
-  const w = chart.clientWidth || 420; const h = 240; const padding = 40;
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS,'svg');
-  svg.setAttribute('width','100%'); svg.setAttribute('height',h); svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
-  // find max y
-  const maxY = Math.max(...points.map(p=>p.pos), 1);
-  const xScale = i => padding + i * ((w - padding*2)/(points.length-1));
-  const yScale = v => padding + (1 - (v / (maxY || 1))) * (h - padding*2);
-  // grid lines
-  for(let i=0;i<=4;i++){
-    const y = padding + i*((h - padding*2)/4);
-    const line = document.createElementNS(svgNS,'line'); line.setAttribute('x1',padding); line.setAttribute('x2', w-padding); line.setAttribute('y1',y); line.setAttribute('y2',y); line.setAttribute('stroke','rgba(2,6,23,0.06)'); svg.appendChild(line);
-  }
-  // axis labels
-  points.forEach((p,i)=>{
-    const tx = document.createElementNS(svgNS,'text'); tx.setAttribute('x', xScale(i)); tx.setAttribute('y', h - 8); tx.setAttribute('text-anchor','middle'); tx.setAttribute('font-size','12'); tx.textContent = p.month; svg.appendChild(tx);
-  });
-  // single positive curve
-  const dPos = points.map((p,i)=> `${i===0?'M':'L'} ${xScale(i)} ${yScale(p.pos)}`).join(' ');
-  const path = document.createElementNS(svgNS,'path'); path.setAttribute('d', dPos); path.setAttribute('fill','none'); path.setAttribute('stroke',SENT_COLORS.Positive); path.setAttribute('stroke-width','2.5'); svg.appendChild(path);
-  // points and hover tooltip
-  points.forEach((p,i)=>{
-    const cx = xScale(i), cy = yScale(p.pos);
-    const circle = document.createElementNS(svgNS,'circle'); circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',6); circle.setAttribute('fill','#fff'); circle.setAttribute('stroke',SENT_COLORS.Positive); circle.setAttribute('stroke-width',2); svg.appendChild(circle);
-    // label
-    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x',cx); label.setAttribute('y',cy - 12); label.setAttribute('font-size','12'); label.setAttribute('text-anchor','middle'); label.setAttribute('font-weight','700'); label.textContent = p.pos; svg.appendChild(label);
-    // hover rect (invisible area)
-    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x', i>0? xScale(i-1):0); rect.setAttribute('y',0); rect.setAttribute('width', i<points.length-1? xScale(i+1)-xScale(i-1):50); rect.setAttribute('height',h); rect.setAttribute('fill','transparent');
-    rect.addEventListener('mouseenter', (ev)=>{
-      showTooltipAt(ev.clientX, ev.clientY, `<div style="font-weight:700">${p.month}</div><div style="color:${SENT_COLORS.Positive}">POSITIVE: ${p.pos}</div><div style="color:${SENT_COLORS.Negative}">NEGATIVE: ${p.neg}</div><div style="color:${SENT_COLORS.Neutral}">NEUTRAL: ${p.neu}</div>`);
-    });
-    rect.addEventListener('mouseleave', hideTooltip);
-    svg.appendChild(rect);
-  });
-
-  chart.appendChild(svg);
-}
-
-let ttTimeout=null;
-function showTooltipAt(x,y,html){
-  hideTooltip();
-  const tt = document.createElement('div'); tt.className='tooltip-box'; tt.id='chartTooltip'; tt.style.position='fixed'; tt.style.left=(x+12)+'px'; tt.style.top=(y+6)+'px'; tt.style.zIndex=9999; tt.innerHTML = html;
-  document.body.appendChild(tt);
-}
-function hideTooltip(){ const t = document.getElementById('chartTooltip'); if(t) t.remove(); }
-
-/* word cloud */
-function renderWordCloud(){
-  const wc = document.getElementById('wordCloud'); wc.innerHTML='';
-  const counts = {};
-  state.data.forEach(r=> detectEmotions(r.comment).forEach(e=> counts[e] = (counts[e]||0)+1));
-  const total = Object.values(counts).reduce((a,b)=>a+b,0) || 1;
-  const colors = ['#34d399','#10b981','#06b6d4','#f59e0b','#ef4444','#60a5fa','#7c3aed'];
-  Object.entries(counts).sort((a,b)=>b[1]-a[1]).forEach(([k,v],idx)=>{
-    const el = document.createElement('div'); el.className='wc-pill'; el.style.background = colors[idx % colors.length]; el.textContent = `${k} (${v})`;
-    wc.appendChild(el);
-  });
-}
-
-/* heatmap */
-function renderHeatmap(){
-  const storeCat = {};
-  state.rawData.forEach(r=>{
-    const cat = classifyImprovementCategory(r.comment);
-    if(cat==='Miscellaneous') return;
-    if(!storeCat[r.storeCode]) storeCat[r.storeCode] = {};
-    if(!storeCat[r.storeCode][cat]) storeCat[r.storeCode][cat] = {score:0,count:0};
-    storeCat[r.storeCode][cat].score += sentimentScore(r.sentiment);
-    storeCat[r.storeCode][cat].count++;
-  });
-  const storeCounts = {};
-  state.rawData.forEach(r=> storeCounts[r.storeCode] = (storeCounts[r.storeCode]||0)+1);
-  const topStores = Object.entries(storeCounts).map(([s,c])=>({s,c})).sort((a,b)=>b.c-a.c).slice(0,10).map(x=>x.s);
-  const categories = uniq([].concat(...Object.values(storeCat).map(s=>Object.keys(s))));
-  const table = document.getElementById('heatmapTable'); table.innerHTML='';
-  const thead = document.createElement('thead'); const trh = document.createElement('tr'); trh.appendChild(Object.assign(document.createElement('th'),{textContent:'Store / Category'}));
-  categories.forEach(cat=>{ const th = document.createElement('th'); th.textContent = cat; trh.appendChild(th); });
-  thead.appendChild(trh); table.appendChild(thead);
-  const tbody = document.createElement('tbody');
-  topStores.forEach(store=>{
-    const tr = document.createElement('tr'); const th = document.createElement('th'); th.textContent = store; tr.appendChild(th);
-    categories.forEach(cat=>{
-      const td = document.createElement('td');
-      const stat = storeCat[store] && storeCat[store][cat] ? storeCat[store][cat] : {score:0,count:0};
-      const avg = stat.count ? stat.score / stat.count : 0;
-      td.textContent = stat.count ? `${avg.toFixed(2)} (${stat.count})` : '-';
-      td.style.background = stat.count ? (avg>0 ? `rgba(16,185,129,${Math.min(0.85, Math.abs(avg))})` : `rgba(239,68,68,${Math.min(0.85, Math.abs(avg))})`) : 'transparent';
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-}
-
-/* comments */
-function renderComments(){
-  const data = state.data.map(r=> ({...r, parsedDate: new Date(r.commentDate)})).sort((a,b)=> b.parsedDate - a.parsedDate);
-  const positives = data.filter(r=> r.sentiment==='Positive').slice(0,15);
-  const negatives = data.filter(r=> r.sentiment==='Negative').slice(0,15);
-  const posWrap = document.getElementById('positiveComments'); posWrap.innerHTML='';
-  positives.forEach(r=>{
-    const card = document.createElement('div'); card.className='comment-card';
-    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😊</span><b>${esc(r.comment || r.__raw.responseType || '')}</b></div><div class="muted" style="margin-top:6px">Store: ${esc(r.storeCode)} | Date: ${formatDate(r.commentDate)}</div>`;
-    posWrap.appendChild(card);
-  });
-  const negWrap = document.getElementById('negativeComments'); negWrap.innerHTML='';
-  negatives.forEach(r=>{
-    const card = document.createElement('div'); card.className='comment-card';
-    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😠</span><b>${esc(r.comment || r.__raw.responseType || '')}</b></div><div class="muted" style="margin-top:6px">Store: ${esc(r.storeCode)} | Date: ${formatDate(r.commentDate)}</div>`;
-    negWrap.appendChild(card);
-  });
-}
-
-/* zone chart simple bars */
-function renderZoneChart(){
-  const zoneMap = {};
-  state.data.forEach(r=>{ if(!zoneMap[r.zone]) zoneMap[r.zone] = {sum:0,count:0}; zoneMap[r.zone].sum += sentimentScore(r.sentiment); zoneMap[r.zone].count++; });
-  const arr = Object.entries(zoneMap).map(([z,v])=>({z,avg: v.count ? v.sum/v.count : 0, count:v.count})).sort((a,b)=>b.count-a.count);
-  const chart = document.getElementById('zoneChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 380; const height = 180; const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
-  const padding = 20;
-  const maxCount = Math.max(...arr.map(a=>a.count),1);
-  arr.forEach((a,i)=>{
-    const bw = (width - padding*2) / Math.max(1,arr.length);
-    const barH = (a.count / maxCount) * (height - 60);
-    const x = padding + i*bw + 8;
-    const y = height - 30 - barH;
-    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width', Math.max(40,bw-16)); rect.setAttribute('height',barH); rect.setAttribute('rx',10); rect.setAttribute('fill',SENT_COLORS.Positive);
-    svg.appendChild(rect);
-    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + Math.max(20,(bw-16)/2)); label.setAttribute('y', height-8); label.setAttribute('font-size','12'); label.setAttribute('text-anchor','middle'); label.textContent = a.z;
-    svg.appendChild(label);
-  });
-  chart.appendChild(svg);
-}
-
-/* ========== Utilities ========== */
-function downloadFilteredCSV(){
-  if(!state.data.length) return alert('No data to download.');
-  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
-  const header = cols.join(',');
-  const lines = state.data.map(r=> cols.map(c=> `"${String(r[c]||'').replace(/"/g,'""')}"`).join(','));
-  const csv = [header].concat(lines).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'voc_filtered.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-
-/* Render everything */
-function renderEverything(){
-  applyFilters();
-  renderKPIsAndInsights();
-  renderDriversChart();
-  renderSentimentPie();
-  renderWordCloud();
-  renderLineChart();
-  renderHeatmap();
-  renderZoneChart();
-  renderComments();
-}
-
-/* ========== UI wiring ========== */
-document.getElementById('openDrawer').addEventListener('click', ()=>{
-  document.getElementById('drawer').classList.add('open');
-  document.body.classList.add('drawer-open');
-});
-document.getElementById('closeDrawer').addEventListener('click', ()=>{
-  document.getElementById('drawer').classList.remove('open');
-  document.body.classList.remove('drawer-open');
-});
-document.getElementById('applyFilters').addEventListener('click', ()=>{
-  renderEverything();
-  // auto close on desktop
-  if(window.innerWidth > 1100){
-    document.getElementById('drawer').classList.remove('open');
-    document.body.classList.remove('drawer-open');
-  }
-});
-document.getElementById('resetFilters').addEventListener('click', ()=>{
-  state.filters = { businessName:null, zones:new Set(), states:new Set(), cities:new Set(), stores:new Set(), mallTypes:new Set(), sentiments:new Set(), fys:new Set(), quarters:new Set(), months:new Set() };
-  renderFilterControls();
-  renderEverything();
-});
-document.getElementById('downloadCsvBtn').addEventListener('click', downloadFilteredCSV);
-document.getElementById('resetFiltersHeader').addEventListener('click', ()=>{
-  state.filters = { businessName:null, zones:new Set(), states:new Set(), cities:new Set(), stores:new Set(), mallTypes:new Set(), sentiments:new Set(), fys:new Set(), quarters:new Set(), months:new Set() };
-  renderFilterControls();
-  renderEverything();
-});
-
-document.addEventListener('click', (e)=>{
-  if(e.target && e.target.matches && e.target.matches('.pill')) {
-    // noop for now
-  }
-});
-
-/* ========== Init ========== */
-(async function init(){
-  const raw = await loadReviewData();
-  state.rawData = raw.map(r=> normalizeRecord(r));
-  refreshDerivedLists(state.rawData);
-  // set sensible defaults
-  if(state.derived.fys.length) state.filters.fys.add(state.derived.fys[0]);
-  if(state.derived.businessNames.length) state.filters.businessName = state.derived.businessNames[0];
-  renderFilterControls();
-  renderEverything();
-})();
-</script>
-
+    const root = createRoot(document.getElementById('root'));
+    root.render(<Dashboard />);
+  </script>
 </body>
 </html>
