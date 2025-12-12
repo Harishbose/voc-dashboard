@@ -4,354 +4,284 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Voice of Customer — Google Reviews Dashboard</title>
-
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-
-<!-- External libs (kept only html2canvas for possible PDF use in future; not used now) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
+<!-- html2canvas and jspdf removed as PDF export isn't required -->
 <style>
 :root{
-  --bg:#eef0f3;
+  --bg:#f3f4f6;
   --card:#ffffff;
-  --muted:#64748b;
-  --text:#0f172a;
-  --accent:#B76E79; /* Rose gold */
+  --muted:#6b7280;
+  --accent:#C9B037; /* muted gold */
+  --text:#2b2b2b; /* graphite black */
   --positive:#10b981;
   --negative:#ef4444;
   --neutral:#f59e0b;
-  --shadow: 0 6px 20px rgba(15,23,42,0.06);
+  --shadow: 0 8px 22px rgba(11,15,25,0.06);
   font-family: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
-}
-
-/* Basic reset */
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-size:14px;
   -webkit-font-smoothing:antialiased;
-  padding:16px;
 }
 
 /* Layout */
-.wrapper { display:flex; gap:16px; align-items:flex-start; min-height:calc(100vh - 32px); }
-
-/* Drawer (filters) */
-.drawer {
-  width:320px;
-  background:var(--card);
-  border-radius:10px;
-  padding:12px;
-  box-shadow:var(--shadow);
-  max-height:calc(100vh - 48px);
-  overflow:auto;
-  transition: transform .25s ease, opacity .25s ease;
-}
-.drawer.hidden { transform: translateX(-20px); opacity:0; pointer-events:none; height:0; width:0; padding:0; margin:0; }
-
-/* Drawer toggle button */
-.drawer-toggle {
-  position:fixed;
-  left:18px;
-  top:20px;
-  z-index:999;
-  background:var(--card);
-  border-radius:8px;
-  padding:8px 10px;
-  box-shadow:var(--shadow);
-  border:1px solid rgba(0,0,0,0.04);
-  cursor:pointer;
-}
-
-/* Main content */
-.main { flex:1; display:flex; flex-direction:column; gap:14px; min-width:0; }
+*{box-sizing:border-box}
+html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-size:14px; line-height:1.35; padding:18px;}
+.container{max-width:1300px;margin:0 auto;}
 
 /* Header */
 .header {
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:8px;
-  background:transparent;
-  padding:8px 12px;
-  border-radius:12px;
-  border-top:4px solid var(--accent); /* rose gold border */
+  gap:6px;
+  margin-bottom:14px;
 }
-.header h1{ margin:0; font-size:22px; font-weight:700; letter-spacing:0.2px; }
-.header .subtitle{ margin:0; font-size:13px; color:var(--muted) }
+.header .title {
+  font-size:22px;
+  font-weight:800;
+  letter-spacing:0.2px;
+}
+.header .subtitle { color:var(--muted); font-size:13px; }
 
-/* KPI row */
-.kpi-row { display:flex; gap:14px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:6px; }
+/* KPI row - KEEP COMPACT SIZE */
+.kpi-row{display:flex;gap:14px;align-items:center;justify-content:center;margin:14px 0;flex-wrap:wrap}
 .kpi {
   background:var(--card);
-  padding:12px 22px;
+  padding:12px 18px;
   border-radius:12px;
+  min-width:160px;
   box-shadow:var(--shadow);
-  min-width:150px;
-  max-width:260px;
   text-align:center;
-  border:1px solid rgba(0,0,0,0.02);
-  position:relative;
 }
-.kpi .label { color:var(--muted); font-size:13px; margin-bottom:8px; }
-.kpi .value { font-weight:700; font-size:22px; color:var(--text); }
+.kpi .label{font-size:13px;color:var(--muted)}
+.kpi .val{font-weight:800;font-size:20px;margin-top:6px;color:var(--text)}
 
-/* Top controls (CSV) */
-.top-controls { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:6px; }
-.btn { background:var(--card); border-radius:8px; padding:8px 12px; cursor:pointer; border:1px solid rgba(0,0,0,0.06); box-shadow:0 2px 6px rgba(2,6,23,0.03); }
-.btn.primary { background:var(--accent); color:white; border:none; }
+/* Controls */
+.controls{display:flex;gap:10px;align-items:center; justify-content:center; margin-bottom:8px;}
+.btn{padding:8px 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:#fff;cursor:pointer}
+.btn.primary{background:var(--accent); color:white; border:none; font-weight:600}
+.btn.ghost{background:transparent; border:1px solid rgba(0,0,0,0.06)}
 
-/* Page grid */
-.content-grid { display:grid; grid-template-columns: 1fr 420px; gap:14px; align-items:start; }
-.card { background:var(--card); border-radius:12px; padding:14px; box-shadow:var(--shadow); overflow:hidden; }
-.card h3 { margin:0 0 12px 0; color:var(--accent); font-size:16px; }
+/* Layout grid — preserve original layout, but constrained to container to avoid horizontal scroll */
+.layout { display:grid; grid-template-columns: 1fr 380px; gap:14px; align-items:start; }
 
-/* Driver pills */
-.pills { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-.pill { background:#f1f5f9; padding:6px 10px; border-radius:999px; cursor:pointer; font-weight:600; font-size:13px; }
+/* Card style */
+.card{background:var(--card); border-radius:12px; padding:14px; box-shadow:var(--shadow); overflow:hidden}
+.card h3{margin:0 0 10px 0;color:var(--accent); font-size:16px}
 
-/* word cloud */
-.word-cloud{ min-height:140px; display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+/* Drivers chart area bigger */
+.drivers { min-height:220px; display:flex; flex-direction:column; gap:8px; }
 
-/* svg chart containers */
-.svg-chart{ width:100%; height:220px }
+/* Pills */
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Word cloud */
+.word-cloud{min-height:140px; display:flex; gap:8px; flex-wrap:wrap; align-items:center}
 
 /* heatmap */
-.heatmap-wrap{ overflow:auto; border-radius:8px; background:linear-gradient(180deg,#fff,#fcfdff); padding:8px; }
-.heatmap-table{ border-collapse:collapse; width:100% }
-.heatmap-table th, .heatmap-table td{ padding:8px 10px; border:1px solid rgba(15,23,42,0.06); white-space:nowrap; text-align:center }
-.heatmap-table th{ background:#fff; position:sticky; top:0; z-index:2 }
+.heatmap-wrap{overflow:auto;border-radius:8px;padding:8px;background:linear-gradient(180deg,#fff,#fbfdff);}
+.heatmap-table{border-collapse:collapse;width:100%}
+.heatmap-table th, .heatmap-table td{padding:8px 10px;border:1px solid rgba(2,6,23,0.04);white-space:nowrap}
+.heatmap-table th{background:#fff;position:sticky;top:0;z-index:2}
 
 /* comments */
-.comments-row{ display:flex; gap:12px; }
-.comment-column{ flex:1; min-height:200px; max-height:360px; overflow:auto; border-radius:10px; background:var(--card); padding:12px }
-.comment-card{ background:#fbfdff; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid rgba(2,6,23,0.04) }
+.comments{display:grid;grid-template-columns:1fr 1fr; gap:14px}
+.comment-card{background:#fbfbfb;border-radius:8px;padding:10px;border:1px solid rgba(2,6,23,0.04)}
+.comment-meta{font-size:12px;color:var(--muted);margin-top:8px}
 
-/* Collapsible filter sections for compactness */
-.filter-section{ margin-bottom:10px }
-.filter-section summary{ cursor:pointer; font-weight:700; margin-bottom:8px; list-style:none; outline:none; }
-.filter-section details[open] summary::after { content: "▲"; float:right; font-weight:600; }
-.filter-section summary::after { content: "▼"; float:right; font-weight:600; }
+/* modal/backdrop for filters and drilldown */
+.modal-backdrop{position:fixed;inset:0;background:rgba(11,15,25,0.45);display:none;align-items:center;justify-content:center;z-index:9999}
+.modal{background:var(--card);border-radius:12px;padding:18px;max-width:740px;width:92%;max-height:86vh;overflow:auto;box-shadow:var(--shadow)}
+.modal h4{margin:0 0 10px 0;color:var(--text)}
 
-/* Drawer content */
-.filter-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-.filter-scroll{ max-height:calc(100vh - 200px); overflow:auto; padding-right:6px }
+/* filter drawer trigger */
+.filter-toggle{position:fixed;left:20px;top:20px;z-index:1000}
 
-/* Responsive: modal on small screens */
+/* responsive */
 @media (max-width:1100px){
-  .wrapper{ padding-left:8px; padding-right:8px }
-  .content-grid{ grid-template-columns: 1fr; }
-  .drawer{ display:none }
-  .drawer-toggle{ left:10px }
-  .header { padding-left:12px; padding-right:12px; width:100% }
+  .layout{grid-template-columns:1fr}
+  .kpi-row{justify-content:space-between;padding:0 8px}
+  .filter-toggle{left:12px;top:12px}
 }
 
-/* Small helpers */
-.small-muted{ font-size:13px; color:var(--muted) }
-.center{ text-align:center }
+/* small visual tweaks */
+.legend-item{display:flex;align-items:center;gap:8px}
+.legend-swatch{width:12px;height:12px;border-radius:4px}
+.centered {display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
-<button id="openFiltersBtn" class="drawer-toggle btn" aria-expanded="false">Filters</button>
+<div class="container" id="appRoot">
 
-<div class="wrapper" id="appRoot">
-  <!-- Drawer (desktop) -->
-  <aside id="drawer" class="drawer" role="region" aria-label="Filters">
-    <div class="filter-head">
-      <div style="font-size:18px; color:var(--accent); font-weight:700">Filters</div>
-      <button id="closeDrawer" class="btn" aria-label="Close filters">Close</button>
-    </div>
+  <!-- Filter button (popout modal) -->
+  <button class="btn filter-toggle" id="openFilters" title="Open filters">Filters</button>
 
-    <div class="filter-scroll" id="filterScroll">
-      <!-- Compact collapsible sections -->
-      <div class="filter-section">
-        <details open>
-          <summary>Business Name</summary>
-          <div id="businessNameWrap"></div>
-        </details>
+  <!-- Header -->
+  <div class="header">
+    <div class="title">Voice of Customer — Google Reviews</div>
+    <div class="subtitle">Interactive Analytics Dashboard</div>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-row" role="region" aria-label="KPIs">
+    <div class="kpi"><div class="label">Total Reviews</div><div class="val" id="kpiTotal">0</div></div>
+    <div class="kpi"><div class="label">% Negative Reviews</div><div class="val" id="kpiNegative">0%</div></div>
+    <div class="kpi"><div class="label">Best Store</div><div class="val" id="kpiBest">—</div></div>
+    <div class="kpi"><div class="label">Worst Store</div><div class="val" id="kpiWorst">—</div></div>
+  </div>
+
+  <!-- Controls (CSV only now) -->
+  <div class="controls">
+    <button id="downloadCsvBtn" class="btn">Download CSV</button>
+    <button id="resetFilters" class="btn">Reset Filters</button>
+  </div>
+
+  <!-- Main layout (left: wide, right: narrow) -->
+  <div class="layout" id="mainLayout">
+    <!-- Left column -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <!-- Drivers -->
+      <div class="card drivers">
+        <h3 id="driversTitle">Key Drivers of Customer Feedback (All Sentiments)</h3>
+        <div class="pills" id="driverPills"></div>
+        <div id="driversChart" style="flex:1;min-height:220px"></div>
       </div>
 
-      <div class="filter-section">
-        <details>
-          <summary>Zone</summary>
-          <div id="zoneWrap"></div>
-        </details>
+      <!-- Word cloud + trend -->
+      <div style="display:grid;grid-template-columns:1fr 1fr; gap:14px">
+        <div class="card">
+          <h3>Emotion Word Cloud</h3>
+          <div class="word-cloud" id="wordCloud"></div>
+        </div>
+        <div class="card">
+          <h3>Sentiment Trend Over Time (APR → MAR)</h3>
+          <div id="lineChart" style="height:220px"></div>
+        </div>
       </div>
 
-      <div class="filter-section">
-        <details>
-          <summary>Location</summary>
-          <div style="margin-bottom:8px">
-            <div class="small-muted">State <input placeholder="Search state..." id="stateSearch" style="width:100%; padding:6px; margin-top:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.05)"></div>
-            <div id="stateWrap"></div>
+      <!-- Heatmap -->
+      <div class="card">
+        <h3>Store Sentiment Heatmap (Top 10 stores × Categories)</h3>
+        <div class="heatmap-wrap" id="heatmapWrap" style="margin-top:8px">
+          <table class="heatmap-table" id="heatmapTable"></table>
+        </div>
+      </div>
+
+      <!-- Comments -->
+      <div class="card">
+        <h3>Customer Comments</h3>
+        <div class="comments" style="margin-top:8px">
+          <div>
+            <h4 style="margin:0 0 8px 0;color:var(--text)">Positive Comments (Top 15)</h4>
+            <div id="positiveComments" style="max-height:260px;overflow:auto;padding-right:6px"></div>
           </div>
           <div>
-            <div class="small-muted">City <input placeholder="Search city..." id="citySearch" style="width:100%; padding:6px; margin-top:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.05)"></div>
-            <div id="cityWrap"></div>
-          </div>
-        </details>
-      </div>
-
-      <div class="filter-section">
-        <details>
-          <summary>Store</summary>
-          <div class="small-muted">Store <input placeholder="Search store..." id="storeSearch" style="width:100%; padding:6px; margin-top:6px; border-radius:6px; border:1px solid rgba(0,0,0,0.05)"></div>
-          <div id="storeWrap"></div>
-        </details>
-      </div>
-
-      <div class="filter-section">
-        <details>
-          <summary>Other</summary>
-          <div style="margin-top:8px"><div class="small-muted">Mall Type</div><div id="mallWrap"></div></div>
-          <div style="margin-top:8px"><div class="small-muted">Sentiment</div><div id="sentimentWrap"></div></div>
-          <div style="margin-top:8px"><div class="small-muted">FY</div><div id="fyWrap"></div></div>
-          <div style="margin-top:8px"><div class="small-muted">Quarter</div><div id="quarterWrap"></div></div>
-          <div style="margin-top:8px"><div class="small-muted">Month</div><div id="monthWrap"></div></div>
-        </details>
-      </div>
-
-      <div style="display:flex; gap:8px; margin-top:10px">
-        <button id="applyFilters" class="btn primary">Apply</button>
-        <button id="resetFilters" class="btn">Reset</button>
-      </div>
-
-      <div style="height:12px"></div>
-    </div>
-  </aside>
-
-  <!-- Main -->
-  <main class="main">
-    <!-- Header -->
-    <div class="header" role="banner">
-      <h1>Voice of Customer — Google Reviews</h1>
-      <div class="subtitle">Interactive Analytics Dashboard</div>
-
-      <!-- KPIs -->
-      <div class="kpi-row" role="region" aria-label="Key performance indicators" style="margin-top:12px">
-        <div class="kpi" id="kpiTotalBox">
-          <div class="label">Total Reviews</div>
-          <div class="value" id="kpiTotal">0</div>
-        </div>
-        <div class="kpi" id="kpiNegBox">
-          <div class="label">% Negative Reviews</div>
-          <div class="value" id="kpiNegative">0%</div>
-        </div>
-        <div class="kpi" id="kpiBestBox">
-          <div class="label">Best Store</div>
-          <div class="value" id="kpiBest">—</div>
-        </div>
-        <div class="kpi" id="kpiWorstBox">
-          <div class="label">Worst Store</div>
-          <div class="value" id="kpiWorst">—</div>
-        </div>
-      </div>
-
-      <!-- top controls -->
-      <div class="top-controls" style="margin-top:10px">
-        <button id="downloadCsvBtn" class="btn">Download CSV</button>
-      </div>
-    </div>
-
-    <!-- Main content grid -->
-    <div class="content-grid">
-      <!-- Left: primary visualisations -->
-      <div>
-        <div class="card">
-          <h3>Key Drivers of Customer Feedback</h3>
-          <div class="pills" id="driverPills"></div>
-          <div id="driversChart" class="svg-chart" aria-hidden="true"></div>
-        </div>
-
-        <div class="card" style="margin-top:12px">
-          <h3>Emotion Word Cloud</h3>
-          <div id="wordCloud" class="word-cloud"></div>
-        </div>
-
-        <div class="card" style="margin-top:12px">
-          <h3>Store Sentiment Heatmap (Top stores × Categories)</h3>
-          <div class="heatmap-wrap" id="heatmapWrap" style="margin-top:8px">
-            <table class="heatmap-table" id="heatmapTable"></table>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:12px">
-          <h3>Sentiment by Zone</h3>
-          <div id="zoneChart" class="svg-chart"></div>
-        </div>
-
-        <div class="card" style="margin-top:12px">
-          <h3>Comments</h3>
-          <div class="comments-row" style="margin-top:8px">
-            <div class="comment-column">
-              <h4 style="margin-top:0; color:var(--accent)">Positive Comments (Top)</h4>
-              <div id="positiveComments"></div>
-            </div>
-            <div class="comment-column">
-              <h4 style="margin-top:0; color:var(--accent)">Negative Comments (Top)</h4>
-              <div id="negativeComments"></div>
-            </div>
+            <h4 style="margin:0 0 8px 0;color:var(--text)">Negative Comments (Top 15)</h4>
+            <div id="negativeComments" style="max-height:260px;overflow:auto;padding-right:6px"></div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Right column: supporting charts -->
-      <div>
-        <div class="card">
-          <h3>Sentiment Distribution</h3>
-          <div id="sentimentPie" style="display:flex;gap:12px;align-items:center">
-            <div id="pieChart" style="width:180px;height:180px"></div>
-            <div id="pieLegend" style="flex:1"></div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:12px">
-          <h3>Sentiment Trend Over Time (APR → MAR)</h3>
-          <div id="lineChart" class="svg-chart"></div>
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <h3>Sentiment Distribution</h3>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div id="pieChart" style="width:220px;height:220px"></div>
+          <div id="pieLegend" style="flex:1"></div>
         </div>
       </div>
-    </div>
-  </main>
-</div>
 
-<!-- Mobile modal filters -->
-<div id="modalFilters" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); align-items:center; justify-content:center; z-index:9999;">
-  <div style="width:92%; max-width:520px; background:var(--card); border-radius:12px; padding:12px; max-height:90vh; overflow:auto;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div style="font-weight:700; color:var(--accent)">Filters</div>
-      <button id="closeModalFilters" class="btn">Close</button>
-    </div>
-    <div style="margin-top:10px">
-      <!-- We'll reuse the same filter containers via JS -->
-      <div style="margin-bottom:8px"><b>Business Name</b><div id="mbBusinessNameWrap"></div></div>
-      <div style="margin-bottom:8px"><b>Zone</b><div id="mbZoneWrap"></div></div>
-      <div style="margin-bottom:8px"><b>State</b><input placeholder="Search state..." id="mbStateSearch" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.05)"><div id="mbStateWrap"></div></div>
-      <div style="margin-bottom:8px"><b>City</b><input placeholder="Search city..." id="mbCitySearch" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.05)"><div id="mbCityWrap"></div></div>
-      <div style="margin-bottom:12px"><b>Store</b><input placeholder="Search store..." id="mbStoreSearch" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.05)"><div id="mbStoreWrap"></div></div>
+      <div class="card">
+        <h3>Sentiment by Zone</h3>
+        <div id="zoneChart" style="height:220px"></div>
+      </div>
 
-      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px">
-        <button id="mbApply" class="btn primary">Apply</button>
-        <button id="mbReset" class="btn">Reset</button>
+      <div class="card" id="insightsCard">
+        <h3>Strategic Insights</h3>
+        <div id="insightsGrid" style="margin-top:8px;display:grid;grid-template-columns:1fr;gap:8px"></div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Filter modal (popout) -->
+<div id="filterModalBackdrop" class="modal-backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h4 id="filterTitle">Filters</h4>
+      <div style="display:flex;gap:8px">
+        <button id="applyFilters" class="btn primary">Apply</button>
+        <button id="closeFilters" class="btn">Close</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <div style="font-weight:700;margin-bottom:6px">Business Name</div>
+        <div id="businessNameWrap" style="max-height:160px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
+      </div>
+
+      <div>
+        <div style="font-weight:700;margin-bottom:6px">Zone</div>
+        <div id="zoneWrap" style="max-height:160px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
+      </div>
+
+      <div>
+        <div style="font-weight:700;margin-bottom:6px">State</div>
+        <input id="stateSearch" placeholder="Search state..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-bottom:8px"/>
+        <div id="stateWrap" style="max-height:220px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
+      </div>
+
+      <div>
+        <div style="font-weight:700;margin-bottom:6px">City / Store</div>
+        <input id="citySearch" placeholder="Search city..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-bottom:8px"/>
+        <div id="cityWrap" style="max-height:100px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04);margin-bottom:8px"></div>
+        <input id="storeSearch" placeholder="Search store..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-bottom:8px"/>
+        <div id="storeWrap" style="max-height:80px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
+      </div>
+
+      <div>
+        <div style="font-weight:700;margin-bottom:6px">Mall Type</div>
+        <div id="mallWrap" style="max-height:120px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
+
+        <div style="margin-top:10px;font-weight:700;margin-bottom:6px">Sentiment</div>
+        <div id="sentimentWrap" style="display:flex;gap:8px"></div>
+      </div>
+
+      <div>
+        <div style="font-weight:700;margin-bottom:6px">FY</div>
+        <div id="fyWrap" style="max-height:120px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
+        <div style="margin-top:10px;font-weight:700;margin-bottom:6px">Quarter</div>
+        <div id="quarterWrap" style="max-height:80px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
+        <div style="margin-top:10px;font-weight:700;margin-bottom:6px">Month</div>
+        <div id="monthWrap" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Drill-down modal -->
+<div id="drillModalBackdrop" class="modal-backdrop">
+  <div class="modal" id="drillModal" role="dialog" aria-modal="true">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h4 id="modalTitle">Store details</h4>
+      <button class="btn" id="closeDrill">Close</button>
+    </div>
+    <div id="modalBody" style="margin-top:12px"></div>
+  </div>
+</div>
+
 <script>
 /* =========================
-   Config
+   Config & URLs
    ========================= */
-
 const API_URLS = [
-  // keep your raw github url; update if needed
   "https://raw.githubusercontent.com/Harishbose/voc-dashboard/main/reviews.json"
 ];
 
 const MONTH_ORDER = ['APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC','JAN','FEB','MAR'];
-const SENTIMENT_COLORS = { Positive: getComputedStyle(document.documentElement).getPropertyValue('--positive').trim() || '#10b981', Negative: getComputedStyle(document.documentElement).getPropertyValue('--negative').trim() || '#ef4444', Neutral: getComputedStyle(document.documentElement).getPropertyValue('--neutral').trim() || '#f59e0b' };
+const SENTIMENT_COLORS = { Positive:'#10b981', Negative:'#ef4444', Neutral:'#f59e0b' };
 
 let state = {
   rawData: [],
@@ -374,36 +304,12 @@ let state = {
 /* =========================
    Helpers
    ========================= */
-
 function escapeHtml(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function sentimentScore(sent){ if(sent==='Positive') return 1; if(sent==='Negative') return -1; return 0; }
-function looksLikeDate(s){
-  if(!s) return false;
-  return /^\d{4}-\d{2}-\d{2}/.test(s) || /^\d{2}\/\d{2}\/\d{4}/.test(s) || /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s);
-}
-function formatDateYMD(dateStr){
-  if(!dateStr) return 'N/A';
-  const d = new Date(dateStr);
-  if(isNaN(d)) return dateStr;
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  const yy = String(d.getFullYear());
-  return mm + '/' + dd + '/' + yy;
-}
-function uniq(arr){ return Array.from(new Set(arr.map(x=>x===null? '': x))).filter(x=>x!=='' ); }
+function looksLikeDate(s){ if(!s) return false; return /^\d{4}-\d{2}-\d{2}/.test(s) || /^\d{2}\/\d{2}\/\d{4}/.test(s); }
+function formatDateYMD(dateStr){ if(!dateStr) return 'N/A'; const d=new Date(dateStr); if(isNaN(d)) return dateStr; return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`; }
 
-/* small emotion detector (kept but not required) */
-function detectEmotions(text){
-  if(!text) return [];
-  const t = text.toLowerCase();
-  const em = [];
-  if(/thank|thanks|gratef|appreciat|love/.test(t)) em.push('Gratitude');
-  if(/angry|hate|annoy|furious|mad|terrible|awful|worst/.test(t)) em.push('Frustration');
-  if(/happy|great|excellent|pleased|satisfied/.test(t)) em.push('Satisfaction');
-  if(/disappointed|sad|upset|not happy|disappoint/.test(t)) em.push('Disappointment');
-  return em;
-}
-
+/* small category classifier (kept as original) */
 function classifyImprovementCategory(text){
   if(!text) return 'Miscellaneous';
   const t = text.toLowerCase();
@@ -422,23 +328,21 @@ function classifyImprovementCategory(text){
 }
 
 /* =========================
-   Data loading
+   Data loading & normalization
    ========================= */
-
 async function loadReviewData(){
   for(const url of API_URLS){
     try {
       const res = await fetch(url);
-      if(!res.ok) { console.warn('fetch failed', url, res.status); continue; }
+      if(!res.ok) continue;
       const data = await res.json();
-      if(Array.isArray(data) && data.length>0){ return data; }
-    } catch(err){ console.warn('Error loading', url, err); }
+      if(Array.isArray(data) && data.length>0) return data;
+    } catch(err){}
   }
-  alert('Could not load data from backend. Check the raw JSON URL.');
+  alert('Could not load data from backend. Check GitHub raw JSON.');
   return [];
 }
 
-/* Normalize each record (comment fallback logic improved) */
 function normalizeRecord(r){
   const rec = {};
   rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating))) ? Number(r.rating) : (r['Google Rating'] ? Number(r['Google Rating']) : 0);
@@ -454,31 +358,33 @@ function normalizeRecord(r){
   rec.fy = r.fy || r['fy'] || r['Financial Year'] || '';
   rec.sentiment = (r.sentiment || r['sentiment'] || 'Neutral').toString();
 
-  // comment handling: prefer comment text; if it's a date-like value, prefer responseType or customer response fields
+  // comment extraction: prefer comment/responseType/customer response; fix cases where comment stores a date string
   let commentText = r.comment || r['comment'] || r['Customer Response'] || r.responseType || r['responseType'] || '';
-  if(looksLikeDate(String(commentText)) || String(commentText).trim().length < 3){
-    if(r.responseType && String(r.responseType).trim().length>3) commentText = r.responseType;
-    else if(r['Customer Response'] && String(r['Customer Response']).trim().length>3) commentText = r['Customer Response'];
-  }
+  // If the comment field looks like a date/time and responseType exists, use responseType
+  if(looksLikeDate(String(commentText)) && r.responseType && String(r.responseType).length > 2) commentText = r.responseType;
+  if(looksLikeDate(String(commentText)) && r['Customer Response'] && String(r['Customer Response']).length > 2) commentText = r['Customer Response'];
+  // fallback to responseType if comment is empty
+  if(!commentText && (r.responseType || r['responseType'])) commentText = r.responseType || r['responseType'];
   rec.comment = commentText || '';
   rec.__raw = r;
   return rec;
 }
 
 /* =========================
-   Derived lists + cascade
+   Derived lists & filters
    ========================= */
+function uniq(arr){ return Array.from(new Set(arr.map(x=>x===null? '': x))).filter(x=>x!=='' ); }
 
 function refreshDerivedLists(all){
-  state.derived.businessNames = uniq(all.map(r=>r.businessName)).filter(x=>x).sort();
-  state.derived.zones = uniq(all.map(r=>r.zone)).filter(x=>x).sort();
-  state.derived.states = uniq(all.map(r=>r.state)).filter(x=>x).sort();
-  state.derived.cities = uniq(all.map(r=>r.city)).filter(x=>x).sort();
-  state.derived.stores = uniq(all.map(r=>r.storeCode)).filter(x=>x).sort();
-  state.derived.mallTypes = uniq(all.map(r=>r.mallType)).filter(x=>x).sort();
-  state.derived.fys = uniq(all.map(r=>r.fy)).filter(x=>x).sort().reverse();
-  state.derived.quarters = uniq(all.map(r=>r.quarter)).filter(x=>x).sort();
-  state.derived.months = uniq(all.map(r=>r.month)).filter(x=>x).sort((a,b)=> MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
+  state.derived.businessNames = uniq(all.map(r=>r.businessName)).sort();
+  state.derived.zones = uniq(all.map(r=>r.zone)).sort();
+  state.derived.states = uniq(all.map(r=>r.state)).sort();
+  state.derived.cities = uniq(all.map(r=>r.city)).sort();
+  state.derived.stores = uniq(all.map(r=>r.storeCode)).sort();
+  state.derived.mallTypes = uniq(all.map(r=>r.mallType)).sort();
+  state.derived.fys = uniq(all.map(r=>r.fy)).sort().reverse();
+  state.derived.quarters = uniq(all.map(r=>r.quarter)).sort();
+  state.derived.months = uniq(all.map(r=>r.month)).sort((a,b)=> MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
 }
 
 function cascadeAllowed(){
@@ -488,26 +394,18 @@ function cascadeAllowed(){
   const allowedCities = new Set();
   const allowedStores = new Set();
 
-  base.forEach(r=>{
-    if(f.zones.size===0 || f.zones.has(r.zone)) allowedStates.add(r.state);
-  });
-  base.forEach(r=>{
-    if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state))) allowedCities.add(r.city);
-  });
-  base.forEach(r=>{
-    if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state)) && (f.cities.size===0 || f.cities.has(r.city))) allowedStores.add(r.storeCode);
-  });
+  base.forEach(r=>{ if(f.zones.size===0 || f.zones.has(r.zone)) allowedStates.add(r.state); });
+  base.forEach(r=>{ if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state))) allowedCities.add(r.city); });
+  base.forEach(r=>{ if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state)) && (f.cities.size===0 || f.cities.has(r.city))) allowedStores.add(r.storeCode); });
 
   state.derived.allowedStates = Array.from(allowedStates).sort();
   state.derived.allowedCities = Array.from(allowedCities).sort();
   state.derived.allowedStores = Array.from(allowedStores).sort();
 }
 
-/* Apply filters */
 function applyFilters(){
   const f = state.filters;
   let data = state.rawData.slice();
-
   if(f.businessName) data = data.filter(r=> r.businessName === f.businessName);
   if(f.zones.size) data = data.filter(r=> f.zones.has(r.zone));
   if(f.states.size) data = data.filter(r=> f.states.has(r.state));
@@ -518,99 +416,85 @@ function applyFilters(){
   if(f.fys.size) data = data.filter(r=> f.fys.has(r.fy));
   if(f.quarters.size) data = data.filter(r=> f.quarters.has(r.quarter));
   if(f.months.size) data = data.filter(r=> f.months.has(r.month));
-
   state.data = data;
 }
 
 /* =========================
-   Render filter controls (both drawer and mobile)
+   Render controls
    ========================= */
-
 function renderFilterControls(){
   cascadeAllowed();
 
-  // Business name radios (drawer)
+  // Business name (radio)
   const bwrap = document.getElementById('businessNameWrap'); bwrap.innerHTML='';
-  const mbBwrap = document.getElementById('mbBusinessNameWrap'); mbBwrap.innerHTML='';
   state.derived.businessNames.forEach(name=>{
     const checked = (state.filters.businessName === name) ? 'checked' : '';
     const div = document.createElement('div'); div.style.marginBottom='6px';
     div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="radio" name="businessName" ${checked} value="${escapeHtml(name)}"> <span>${escapeHtml(name)}</span></label>`;
     bwrap.appendChild(div);
-    const div2 = div.cloneNode(true);
-    mbBwrap.appendChild(div2);
   });
 
-  // zones
+  // zone
   const zwrap = document.getElementById('zoneWrap'); zwrap.innerHTML='';
-  const mbZw = document.getElementById('mbZoneWrap'); mbZw.innerHTML='';
   state.derived.zones.forEach(z=>{
-    const checked = state.filters.zones.has(z) ? 'checked' : '';
-    const div = document.createElement('div'); div.style.marginBottom='6px';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(z)}" class="zone-checkbox" ${checked}/> ${escapeHtml(z)}</label>`;
+    const div = document.createElement('div');
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(z)}" class="zone-checkbox"/> ${escapeHtml(z)}</label>`;
     zwrap.appendChild(div);
-    mbZw.appendChild(div.cloneNode(true));
   });
 
   // states
   const swrap = document.getElementById('stateWrap'); swrap.innerHTML='';
-  const mbSw = document.getElementById('mbStateWrap'); mbSw.innerHTML='';
   (state.derived.allowedStates || state.derived.states).forEach(s=>{
-    const checked = state.filters.states.has(s) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="state-checkbox" ${checked}/> ${escapeHtml(s)}</label>`;
+    const div = document.createElement('div');
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="state-checkbox"/> ${escapeHtml(s)}</label>`;
     swrap.appendChild(div);
-    mbSw.appendChild(div.cloneNode(true));
   });
 
   // cities
   const cwrap = document.getElementById('cityWrap'); cwrap.innerHTML='';
-  const mbCw = document.getElementById('mbCityWrap'); mbCw.innerHTML='';
   (state.derived.allowedCities || state.derived.cities).forEach(c=>{
-    const checked = state.filters.cities.has(c) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(c)}" class="city-checkbox" ${checked}/> ${escapeHtml(c)}</label>`;
+    const div = document.createElement('div');
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(c)}" class="city-checkbox"/> ${escapeHtml(c)}</label>`;
     cwrap.appendChild(div);
-    mbCw.appendChild(div.cloneNode(true));
   });
 
   // stores
   const stwrap = document.getElementById('storeWrap'); stwrap.innerHTML='';
-  const mbSt = document.getElementById('mbStoreWrap'); mbSt.innerHTML='';
   (state.derived.allowedStores || state.derived.stores).forEach(s=>{
-    const checked = state.filters.stores.has(s) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="store-checkbox" ${checked}/> ${escapeHtml(s)}</label>`;
+    const div = document.createElement('div');
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="store-checkbox"/> ${escapeHtml(s)}</label>`;
     stwrap.appendChild(div);
-    mbSt.appendChild(div.cloneNode(true));
   });
 
   // mall types
   const mwrap = document.getElementById('mallWrap'); mwrap.innerHTML='';
   state.derived.mallTypes.forEach(m=>{
-    const checked = state.filters.mallTypes.has(m) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(m)}" class="mall-checkbox" ${checked}/> ${escapeHtml(m)}</label>`;
+    const div = document.createElement('div');
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(m)}" class="mall-checkbox"/> ${escapeHtml(m)}</label>`;
     mwrap.appendChild(div);
   });
 
   // sentiment
   const sentWrap = document.getElementById('sentimentWrap'); sentWrap.innerHTML='';
   ['Positive','Neutral','Negative'].forEach(s=>{
-    const checked = state.filters.sentiments.has(s) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="sent-checkbox" ${checked}/> ${s}</label>`;
+    const div = document.createElement('div');
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="sent-checkbox"/> ${s}</label>`;
     sentWrap.appendChild(div);
   });
 
-  // FY
+  // fy
   const fyw = document.getElementById('fyWrap'); fyw.innerHTML='';
   state.derived.fys.forEach(fy=>{
-    const checked = state.filters.fys.has(fy) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(fy)}" class="fy-checkbox" ${checked}/> ${escapeHtml(fy)}</label>`;
+    const div = document.createElement('div');
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(fy)}" class="fy-checkbox"/> ${escapeHtml(fy)}</label>`;
     fyw.appendChild(div);
   });
 
-  // quarter
+  // quarters
   const qw = document.getElementById('quarterWrap'); qw.innerHTML='';
   state.derived.quarters.forEach(q=>{
-    const checked = state.filters.quarters.has(q) ? 'checked' : '';
-    const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(q)}" class="q-checkbox" ${checked}/> ${escapeHtml(q)}</label>`;
+    const div = document.createElement('div');
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(q)}" class="q-checkbox"/> ${escapeHtml(q)}</label>`;
     qw.appendChild(div);
   });
 
@@ -618,51 +502,88 @@ function renderFilterControls(){
   const mw = document.getElementById('monthWrap'); mw.innerHTML='';
   MONTH_ORDER.forEach(m=>{
     if(state.derived.months.includes(m)){
-      const checked = state.filters.months.has(m) ? 'checked' : '';
-      const div = document.createElement('div'); div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(m)}" class="m-checkbox" ${checked}/> ${escapeHtml(m)}</label>`;
-      mw.appendChild(div);
+      const el = document.createElement('label');
+      el.style.display='inline-flex'; el.style.alignItems='center'; el.style.gap='6px';
+      el.innerHTML = `<input type="checkbox" class="m-checkbox" data-val="${escapeHtml(m)}"/> ${escapeHtml(m)}`;
+      mw.appendChild(el);
     }
   });
 
   attachFilterListeners();
 }
 
-/* Attach listeners to filter inputs (drawer & mobile clones) */
+/* attach listeners for modal controls and filter inputs */
 function attachFilterListeners(){
-  // radios
   document.querySelectorAll('input[name="businessName"]').forEach(r=>{
     r.addEventListener('change', e=>{
       state.filters.businessName = e.target.value;
-      renderEverything();
     });
   });
 
-  // generic checkbox groups - delegate
-  function attachClass(sel, setName){
-    document.querySelectorAll(sel).forEach(cb=>{
-      cb.removeEventListener('change', handleChange);
-      cb.addEventListener('change', handleChange);
-    });
-    function handleChange(e){
+  document.querySelectorAll('.zone-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
       const val = e.target.dataset.val;
-      const set = state.filters[setName];
-      if(e.target.checked) set.add(val); else set.delete(val);
-      renderFilterControls(); // re-render cascade
-      renderEverything();
-    }
-  }
+      if(e.target.checked) state.filters.zones.add(val); else state.filters.zones.delete(val);
+    });
+  });
 
-  attachClass('.zone-checkbox','zones');
-  attachClass('.state-checkbox','states');
-  attachClass('.city-checkbox','cities');
-  attachClass('.store-checkbox','stores');
-  attachClass('.mall-checkbox','mallTypes');
-  attachClass('.sent-checkbox','sentiments');
-  attachClass('.fy-checkbox','fys');
-  attachClass('.q-checkbox','quarters');
-  attachClass('.m-checkbox','months');
+  document.querySelectorAll('.state-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const val = e.target.dataset.val;
+      if(e.target.checked) state.filters.states.add(val); else state.filters.states.delete(val);
+    });
+  });
 
-  // search boxes (drawer)
+  document.querySelectorAll('.city-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const val = e.target.dataset.val;
+      if(e.target.checked) state.filters.cities.add(val); else state.filters.cities.delete(val);
+    });
+  });
+
+  document.querySelectorAll('.store-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const val = e.target.dataset.val;
+      if(e.target.checked) state.filters.stores.add(val); else state.filters.stores.delete(val);
+    });
+  });
+
+  document.querySelectorAll('.mall-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const val = e.target.dataset.val;
+      if(e.target.checked) state.filters.mallTypes.add(val); else state.filters.mallTypes.delete(val);
+    });
+  });
+
+  document.querySelectorAll('.sent-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const val = e.target.dataset.val;
+      if(e.target.checked) state.filters.sentiments.add(val); else state.filters.sentiments.delete(val);
+    });
+  });
+
+  document.querySelectorAll('.fy-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const val = e.target.dataset.val;
+      if(e.target.checked) state.filters.fys.add(val); else state.filters.fys.delete(val);
+    });
+  });
+
+  document.querySelectorAll('.q-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const val = e.target.dataset.val;
+      if(e.target.checked) state.filters.quarters.add(val); else state.filters.quarters.delete(val);
+    });
+  });
+
+  document.querySelectorAll('.m-checkbox').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const val = e.target.dataset.val;
+      if(e.target.checked) state.filters.months.add(val); else state.filters.months.delete(val);
+    });
+  });
+
+  // searches
   document.getElementById('stateSearch').addEventListener('input', e=>{
     const q = e.target.value.toLowerCase();
     document.querySelectorAll('#stateWrap > div').forEach(div=>{
@@ -681,35 +602,11 @@ function attachFilterListeners(){
       div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
     });
   });
-
-  // mobile search boxes
-  const mbState = document.getElementById('mbStateSearch');
-  if(mbState) mbState.addEventListener('input', e=>{
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#mbStateWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
-  const mbCity = document.getElementById('mbCitySearch');
-  if(mbCity) mbCity.addEventListener('input', e=>{
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#mbCityWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
-  const mbStore = document.getElementById('mbStoreSearch');
-  if(mbStore) mbStore.addEventListener('input', e=>{
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#mbStoreWrap > div').forEach(div=>{
-      div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
 }
 
 /* =========================
-   KPIs and insights
+   KPIs & Insights
    ========================= */
-
 function renderKPIsAndInsights(){
   const data = state.data;
   const total = data.length;
@@ -718,31 +615,55 @@ function renderKPIsAndInsights(){
   document.getElementById('kpiTotal').textContent = total;
   document.getElementById('kpiNegative').textContent = negPct;
 
-  // Best/Worst by weighted score: avg_rating * log(1 + review_count)
-  const storeMap = {};
+  // Best & worst store logic:
+  // We use average rating AND review counts to avoid single-review anomalies.
+  // Weighted score = avg_rating * log(1 + review_count)
+  const byStore = {};
   state.rawData.forEach(r=>{
-    if(!storeMap[r.storeCode]) storeMap[r.storeCode] = {sum:0,count:0};
-    storeMap[r.storeCode].sum += Number(r.rating||0);
-    storeMap[r.storeCode].count++;
+    if(!byStore[r.storeCode]) byStore[r.storeCode] = {sum:0,count:0};
+    byStore[r.storeCode].sum += Number(r.rating||0);
+    byStore[r.storeCode].count++;
   });
-  const storeScores = Object.entries(storeMap).map(([s,v])=>{
-    const avg = v.count ? v.sum/v.count : 0;
-    const weighted = avg * Math.log(1 + v.count);
-    return {store:s,avg, count:v.count, weighted};
-  }).filter(x=>x.store && x.store.trim() !== '');
-  storeScores.sort((a,b)=>b.weighted - a.weighted);
+  const storeStats = Object.entries(byStore).map(([k,v])=>({
+    store:k,
+    avg:v.count? v.sum/v.count : 0,
+    count:v.count,
+    weighted: (v.count? ( (v.sum/v.count) * Math.log(1 + v.count) ) : 0)
+  })).filter(s=>s.store).sort((a,b)=>b.weighted - a.weighted);
 
-  const best = storeScores[0];
-  const worst = storeScores.length ? storeScores[storeScores.length-1] : null;
+  // pick best (highest weighted) and worst (lowest avg but require at least 3 reviews)
+  const best = storeStats[0];
+  const worstCandidates = storeStats.filter(s=>s.count>=3).sort((a,b)=>a.avg-b.avg);
+  const worst = worstCandidates.length ? worstCandidates[0] : (storeStats.length ? storeStats[storeStats.length-1] : null);
 
-  document.getElementById('kpiBest').textContent = best ? `${best.store} (${best.avg.toFixed(2)} • ${best.count})` : '—';
-  document.getElementById('kpiWorst').textContent = worst ? `${worst.store} (${worst.avg.toFixed(2)} • ${worst.count})` : '—';
+  document.getElementById('kpiBest').textContent = best ? `${best.store} (${best.avg.toFixed(2)} / ${best.count})` : '—';
+  document.getElementById('kpiWorst').textContent = worst ? `${worst.store} (${worst.avg.toFixed(2)} / ${worst.count})` : '—';
+
+  // Strategic insights (simple heuristics)
+  const insightsGrid = document.getElementById('insightsGrid'); insightsGrid.innerHTML='';
+  const categories = {};
+  data.forEach(r=>{
+    const c = classifyImprovementCategory(r.comment);
+    if(c!=='Miscellaneous') categories[c] = (categories[c]||0)+1;
+  });
+  const totalCats = Object.values(categories).reduce((a,b)=>a+b,0) || 1;
+  const sortedCats = Object.entries(categories).map(([k,v])=>({k,v,percent:Math.round(v/totalCats*100)})).sort((a,b)=>b.v-a.v);
+  if(sortedCats.length){
+    sortedCats.slice(0,4).forEach(s=>{
+      const el = document.createElement('div'); el.className='card'; el.style.padding='10px';
+      el.innerHTML = `<div style="font-weight:700;color:var(--text)">${escapeHtml(s.k)}</div><div style="color:var(--muted);font-size:13px">${s.v} mentions — ${s.percent}%</div>`;
+      insightsGrid.appendChild(el);
+    });
+  } else {
+    const el = document.createElement('div'); el.className='card'; el.style.padding='10px';
+    el.innerHTML = `<div style="color:var(--muted)">No strategic insights for the active filters.</div>`;
+    insightsGrid.appendChild(el);
+  }
 }
 
 /* =========================
-   Drivers chart + pills
+   Drivers chart (horizontal bars)
    ========================= */
-
 function renderDriversChart(){
   const data = state.data;
   const categories = {};
@@ -761,29 +682,29 @@ function renderDriversChart(){
   if(others) filtered.push({k:'Miscellaneous/Others', v:others});
   filtered.sort((a,b)=>b.v-a.v);
 
+  // pills
   const pillWrap = document.getElementById('driverPills'); pillWrap.innerHTML='';
   filtered.forEach(item=>{
-    const pill = document.createElement('div'); pill.className='pill';
+    const pill = document.createElement('div'); pill.className='pill'; pill.style.padding='8px 12px'; pill.style.background='#f3f4f6'; pill.style.borderRadius='999px';
     pill.textContent = `${item.k} (${item.v})`;
-    pill.addEventListener('click', ()=>{ state.filters.tempCategory = item.k; renderEverything(); });
+    pill.addEventListener('click', ()=>{ /* optional category drill */ });
     pillWrap.appendChild(pill);
   });
 
-  // simple svg bars
   const chart = document.getElementById('driversChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 700, height = Math.max(60, filtered.length*36);
+  const width = chart.clientWidth || 760, height = Math.max(100, filtered.length*36);
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS,'svg');
   svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   const max = Math.max(...filtered.map(f=>f.v),1);
   filtered.forEach((f,i)=>{
-    const barW = Math.round((f.v/max) * (width - 240));
-    const y = i*36 + 10;
-    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x',10); label.setAttribute('y',y+15); label.setAttribute('font-size','12'); label.setAttribute('font-weight','700'); label.textContent = f.k;
+    const y = i*36 + 8;
+    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x',12); label.setAttribute('y',y+15); label.setAttribute('font-size','12'); label.setAttribute('fill', '#2b2b2b'); label.textContent = f.k;
     svg.appendChild(label);
-    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',220); rect.setAttribute('y',y+2); rect.setAttribute('width',barW); rect.setAttribute('height',20); rect.setAttribute('rx',6); rect.setAttribute('fill','#f4dfe6');
+    const barW = Math.round((f.v/max) * (width - 220));
+    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',200); rect.setAttribute('y',y+2); rect.setAttribute('width',barW); rect.setAttribute('height',20); rect.setAttribute('rx',8); rect.setAttribute('fill','#f7e9d0');
     svg.appendChild(rect);
-    const valText = document.createElementNS(svgNS,'text'); valText.setAttribute('x',220 + barW + 8); valText.setAttribute('y', y+16); valText.setAttribute('font-size','12'); valText.setAttribute('font-weight','700'); valText.textContent = f.v;
+    const valText = document.createElementNS(svgNS,'text'); valText.setAttribute('x',200 + barW + 8); valText.setAttribute('y', y+16); valText.setAttribute('font-size','12'); valText.setAttribute('fill','#2b2b2b'); valText.textContent = f.v;
     svg.appendChild(valText);
   });
   chart.appendChild(svg);
@@ -792,14 +713,13 @@ function renderDriversChart(){
 /* =========================
    Sentiment pie
    ========================= */
-
 function renderSentimentPie(){
   const data = state.data;
   const counts = {Positive:0, Neutral:0, Negative:0};
   data.forEach(d=> { if(d.sentiment in counts) counts[d.sentiment]++; else counts.Neutral++; });
   const total = counts.Positive + counts.Neutral + counts.Negative || 1;
   const pie = document.getElementById('pieChart'); pie.innerHTML='';
-  const size = 180; const svgNS = 'http://www.w3.org/2000/svg'; const cx=size/2, cy=size/2, r=size/2-8;
+  const size = 220; const svgNS = 'http://www.w3.org/2000/svg'; const cx=size/2, cy=size/2, r=size/2-8;
   const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width',size); svg.setAttribute('height',size); svg.setAttribute('viewBox',`0 0 ${size} ${size}`);
   let start = -Math.PI/2;
   Object.entries(counts).forEach(([k,v])=>{
@@ -814,16 +734,7 @@ function renderSentimentPie(){
     path.setAttribute('fill', SENTIMENT_COLORS[k]);
     svg.appendChild(path);
 
-    // outside label
-    const mid = start + slice/2;
-    const lx = cx + (r+22) * Math.cos(mid);
-    const ly = cy + (r+22) * Math.sin(mid);
-    const txt = document.createElementNS(svgNS,'text');
-    txt.setAttribute('x', lx); txt.setAttribute('y', ly); txt.setAttribute('font-size','11');
-    txt.setAttribute('text-anchor', mid > Math.PI/2 && mid < 3*Math.PI/2 ? 'end' : 'start');
-    txt.textContent = k + ' ' + (v/total*100).toFixed(1) + '%';
-    svg.appendChild(txt);
-
+    // outside label: skip precise line-wrapping — we show legend on the right
     start = end;
   });
   pie.appendChild(svg);
@@ -831,17 +742,27 @@ function renderSentimentPie(){
   // legend
   const legend = document.getElementById('pieLegend'); legend.innerHTML='';
   Object.entries(counts).forEach(([k,v])=>{
-    const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.marginBottom='6px';
-    const sw = document.createElement('div'); sw.style.width='12px'; sw.style.height='12px'; sw.style.borderRadius='4px'; sw.style.background=SENTIMENT_COLORS[k];
-    const label = document.createElement('div'); label.style.fontWeight='700'; label.textContent = `${k} — ${(v/total*100).toFixed(1)}% (${v})`;
-    row.appendChild(sw); row.appendChild(label);
-    legend.appendChild(row);
+    const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='10px'; row.style.marginBottom='8px';
+    const sw = document.createElement('div'); sw.className='legend-swatch'; sw.style.background = SENTIMENT_COLORS[k];
+    const label = document.createElement('div'); label.innerHTML = `<strong style="color:var(--text)">${k}</strong> — ${(v/total*100).toFixed(1)}% (${v})`;
+    row.appendChild(sw); row.appendChild(label); legend.appendChild(row);
   });
 }
 
 /* =========================
    Word cloud
    ========================= */
+function detectEmotions(text){
+  if(!text) return [];
+  const t = text.toLowerCase();
+  const em = [];
+  if(/thank|thanks|gratef|appreciat|love|😊/.test(t)) em.push('Gratitude');
+  if(/angry|hate|annoy|furious|😠|mad|rage|terrible|awful|worst/.test(t)) em.push('Frustration');
+  if(/happy|great|excellent|pleased|satisfied/.test(t)) em.push('Satisfaction');
+  if(/disappointed|sad|upset|not happy|disappoint/.test(t)) em.push('Disappointment');
+  if(/confused|unclear|unsure/.test(t)) em.push('Confusion');
+  return em;
+}
 
 function renderWordCloud(){
   const data = state.data;
@@ -851,36 +772,35 @@ function renderWordCloud(){
   const total = Object.values(emotionCounts).reduce((a,b)=>a+b,0) || 1;
   Object.entries(emotionCounts).sort((a,b)=>b[1]-a[1]).forEach(([word,count])=>{
     const el = document.createElement('div'); const size = 12 + Math.round((count/total)*22);
-    el.style.fontSize = size + 'px'; el.style.fontWeight = 700; el.textContent = word; wc.appendChild(el);
+    el.style.fontSize = size + 'px'; el.style.background='#fff'; el.style.padding='4px 8px'; el.style.borderRadius='6px';
+    el.textContent = word; wc.appendChild(el);
   });
 }
 
 /* =========================
-   Line chart (APR → MAR)
+   Line chart (APR->MAR)
    ========================= */
-
 function renderLineChart(){
   const map = {}; MONTH_ORDER.forEach(m=> map[m] = {sum:0,count:0});
   state.data.forEach(r=> { if(map[r.month]){ map[r.month].sum += sentimentScore(r.sentiment); map[r.month].count++; } });
   const points = MONTH_ORDER.map(m=> map[m].count ? map[m].sum/map[m].count : 0);
   const chart = document.getElementById('lineChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 700, height = 220, padding = 40;
+  const width = chart.clientWidth || 520, height = 220, padding = 40;
   const svgNS = 'http://www.w3.org/2000/svg'; const svg = document.createElementNS(svgNS,'svg');
   svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   const yScale = v => padding + ( (1 - (v+1)/2) * (height - padding*2));
   const xScale = i => padding + i * ((width - padding*2) / (MONTH_ORDER.length-1));
-  for(let i=0;i<=4;i++){ const y = padding + i*((height - padding*2)/4); const line = document.createElementNS(svgNS,'line'); line.setAttribute('x1',padding); line.setAttribute('x2',width-padding); line.setAttribute('y1',y); line.setAttribute('y2',y); line.setAttribute('stroke','rgba(2,6,23,0.04)'); svg.appendChild(line); }
-  MONTH_ORDER.forEach((m,i)=>{ const tx = document.createElementNS(svgNS,'text'); tx.setAttribute('x', xScale(i)); tx.setAttribute('y', height - 8); tx.setAttribute('font-size','11'); tx.setAttribute('text-anchor','middle'); tx.textContent = m; svg.appendChild(tx); });
+  for(let i=0;i<=4;i++){ const y = padding + i*((height - padding*2)/4); const line = document.createElementNS(svgNS,'line'); line.setAttribute('x1',padding); line.setAttribute('x2',width-padding); line.setAttribute('y1',y); line.setAttribute('y2',y); line.setAttribute('stroke','rgba(2,6,23,0.05)'); svg.appendChild(line); }
+  MONTH_ORDER.forEach((m,i)=>{ const tx = document.createElementNS(svgNS,'text'); tx.setAttribute('x', xScale(i)); tx.setAttribute('y', height - 8); tx.setAttribute('font-size','10'); tx.setAttribute('text-anchor','middle'); tx.textContent = m; svg.appendChild(tx); });
   const pathD = points.map((p,i)=> `${i===0?'M':'L'} ${xScale(i)} ${yScale(p)}`).join(' ');
-  const path = document.createElementNS(svgNS,'path'); path.setAttribute('d', pathD); path.setAttribute('fill','none'); path.setAttribute('stroke',getComputedStyle(document.documentElement).getPropertyValue('--text').trim()); path.setAttribute('stroke-width','2'); svg.appendChild(path);
-  points.forEach((p,i)=>{ const cx = xScale(i), cy = yScale(p); const circle = document.createElementNS(svgNS,'circle'); circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',4); circle.setAttribute('fill','#fff'); circle.setAttribute('stroke',getComputedStyle(document.documentElement).getPropertyValue('--text').trim()); circle.setAttribute('stroke-width',2); svg.appendChild(circle); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', cx); label.setAttribute('y', cy - 8); label.setAttribute('font-size','11'); label.setAttribute('text-anchor','middle'); label.setAttribute('font-weight','700'); label.textContent = (p).toFixed(2); svg.appendChild(label); });
+  const path = document.createElementNS(svgNS,'path'); path.setAttribute('d', pathD); path.setAttribute('fill','none'); path.setAttribute('stroke','#2b2b2b'); path.setAttribute('stroke-width','2'); svg.appendChild(path);
+  points.forEach((p,i)=>{ const cx = xScale(i), cy = yScale(p); const circle = document.createElementNS(svgNS,'circle'); circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',4); circle.setAttribute('fill','#fff'); circle.setAttribute('stroke','#2b2b2b'); circle.setAttribute('stroke-width',2); svg.appendChild(circle); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', cx); label.setAttribute('y', cy - 8); label.setAttribute('font-size','10'); label.setAttribute('text-anchor','middle'); label.setAttribute('font-weight','700'); label.textContent = (p).toFixed(2); svg.appendChild(label); });
   chart.appendChild(svg);
 }
 
 /* =========================
    Heatmap
    ========================= */
-
 function renderHeatmap(){
   const storeCat = {};
   state.rawData.forEach(r=>{
@@ -898,7 +818,7 @@ function renderHeatmap(){
   const categories = uniq([].concat(...Object.values(storeCat).map(s=>Object.keys(s))));
 
   const table = document.getElementById('heatmapTable'); table.innerHTML='';
-  const thead = document.createElement('thead'); const trh = document.createElement('tr'); const th0 = document.createElement('th'); th0.textContent='Store \\ Category'; trh.appendChild(th0);
+  const thead = document.createElement('thead'); const trh = document.createElement('tr'); const th0 = document.createElement('th'); th0.textContent='Store / Category'; trh.appendChild(th0);
   categories.forEach(cat=>{ const th = document.createElement('th'); th.textContent = cat; trh.appendChild(th); });
   thead.appendChild(trh); table.appendChild(thead);
 
@@ -906,6 +826,7 @@ function renderHeatmap(){
   topStores.forEach(store=>{
     const tr = document.createElement('tr');
     const th = document.createElement('th'); th.textContent = store; th.style.cursor='pointer';
+    th.addEventListener('click', ()=> showStoreDrill(store));
     tr.appendChild(th);
     categories.forEach(cat=>{
       const td = document.createElement('td');
@@ -925,7 +846,6 @@ function renderHeatmap(){
 /* =========================
    Zone chart
    ========================= */
-
 function renderZoneChart(){
   const zoneMap = {};
   state.data.forEach(r=>{
@@ -935,26 +855,22 @@ function renderZoneChart(){
   });
   const arr = Object.entries(zoneMap).map(([z,v])=>({z,avg: v.count ? v.sum/v.count : 0, count:v.count})).sort((a,b)=>b.avg-a.avg);
   const chart = document.getElementById('zoneChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 380; const height = 220; const padding = 30; const svgNS = 'http://www.w3.org/2000/svg';
+  const width = chart.clientWidth || 340; const height = 220; const padding = 30; const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
-  arr.forEach((a,i)=>{ const bw = (width - padding*2) / Math.max(1,arr.length); const barH = ((a.avg + 1)/2) * (height - padding*2); const x = padding + i*bw + 6; const y = height - padding - barH; const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',Math.max(10,bw-12)); rect.setAttribute('height',barH); rect.setAttribute('rx',6); rect.setAttribute('fill', a.avg > 0 ? SENTIMENT_COLORS.Positive : (a.avg < 0 ? SENTIMENT_COLORS.Negative : SENTIMENT_COLORS.Neutral)); svg.appendChild(rect); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + (Math.max(10,bw-12))/2); label.setAttribute('y', height - 8); label.setAttribute('font-size','11'); label.setAttribute('text-anchor','middle'); label.textContent = a.z; svg.appendChild(label); const val = document.createElementNS(svgNS,'text'); val.setAttribute('x', x + (Math.max(10,bw-12))/2); val.setAttribute('y', y - 6); val.setAttribute('font-size','11'); val.setAttribute('text-anchor','middle'); val.setAttribute('font-weight','700'); val.textContent = a.avg.toFixed(2); svg.appendChild(val); });
+  arr.forEach((a,i)=>{ const bw = (width - padding*2) / Math.max(1,arr.length); const barH = ((a.avg + 1)/2) * (height - padding*2); const x = padding + i*bw + 6; const y = height - padding - barH; const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',Math.max(10,bw-12)); rect.setAttribute('height',barH); rect.setAttribute('rx',8); rect.setAttribute('fill', a.avg > 0 ? SENTIMENT_COLORS.Positive : (a.avg < 0 ? SENTIMENT_COLORS.Negative : SENTIMENT_COLORS.Neutral)); svg.appendChild(rect); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + (Math.max(10,bw-12))/2); label.setAttribute('y', height - 8); label.setAttribute('font-size','12'); label.setAttribute('text-anchor','middle'); label.textContent = a.z; svg.appendChild(label); const val = document.createElementNS(svgNS,'text'); val.setAttribute('x', x + (Math.max(10,bw-12))/2); val.setAttribute('y', y - 6); val.setAttribute('font-size','11'); val.setAttribute('text-anchor','middle'); val.setAttribute('font-weight','700'); val.textContent = a.avg.toFixed(2); svg.appendChild(val); });
   chart.appendChild(svg);
 }
 
 /* =========================
    Comments rendering
    ========================= */
-
 function renderComments(){
-  // ensure comments array uses normalized comment text
+  // ensure comments use responseType fallback when needed
   const data = state.data.map(r=> ({...r, parsedDate: new Date(r.commentDate)})).sort((a,b)=> b.parsedDate - a.parsedDate);
-
-  // fallback: if comment is date-like or empty, try using responseType or Customer Response
   data.forEach(r=>{
-    if((!r.comment || looksLikeDate(r.comment)) && r.__raw){
-      if(r.__raw.responseType && r.__raw.responseType.length>3) r.comment = r.__raw.responseType;
-      else if(r.__raw['Customer Response'] && r.__raw['Customer Response'].length>3) r.comment = r.__raw['Customer Response'];
-    }
+    if(looksLikeDate(r.comment) && r.__raw && r.__raw.responseType && r.__raw.responseType.length>3) r.comment = r.__raw.responseType;
+    // fallback to responseType if comment is empty
+    if(!r.comment && r.__raw && (r.__raw.responseType || r.__raw['Customer Response'])) r.comment = r.__raw.responseType || r.__raw['Customer Response'] || '';
   });
 
   const positives = data.filter(r=> r.sentiment==='Positive').slice(0,15);
@@ -963,22 +879,120 @@ function renderComments(){
   const posWrap = document.getElementById('positiveComments'); posWrap.innerHTML='';
   positives.forEach(r=>{
     const card = document.createElement('div'); card.className='comment-card';
-    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😊</span><b>${escapeHtml(r.comment || r.__raw.responseType || '—')}</b></div><div class="small-muted" style="margin-top:6px">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
+    card.innerHTML = `<div style="font-size:14px"><b>${escapeHtml(r.comment)}</b></div><div class="comment-meta">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
     posWrap.appendChild(card);
   });
 
   const negWrap = document.getElementById('negativeComments'); negWrap.innerHTML='';
   negatives.forEach(r=>{
     const card = document.createElement('div'); card.className='comment-card';
-    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😠</span><b>${escapeHtml(r.comment || r.__raw.responseType || '—')}</b></div><div class="small-muted" style="margin-top:6px">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
+    card.innerHTML = `<div style="font-size:14px"><b>${escapeHtml(r.comment)}</b></div><div class="comment-meta">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
     negWrap.appendChild(card);
   });
 }
 
 /* =========================
-   Render all
+   Drilldown modal
    ========================= */
+function showStoreDrill(storeCode){
+  const modal = document.getElementById('drillModalBackdrop');
+  const body = document.getElementById('modalBody');
+  const title = document.getElementById('modalTitle');
+  title.textContent = `Store: ${storeCode}`;
+  const rows = state.rawData.filter(r=> r.storeCode === storeCode);
+  if(rows.length === 0){
+    body.innerHTML = '<p>No data for this store.</p>';
+  } else {
+    const avgRating = (rows.reduce((s,r)=>s + Number(r.rating||0),0) / rows.length).toFixed(2);
+    const sentiments = {Positive:0,Neutral:0,Negative:0};
+    rows.forEach(r=> sentiments[r.sentiment] = (sentiments[r.sentiment]||0) + 1);
+    const topDrivers = {};
+    rows.forEach(r=> { const cat = classifyImprovementCategory(r.comment); topDrivers[cat] = (topDrivers[cat]||0)+1; });
+    const driverList = Object.entries(topDrivers).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>`${x[0]} (${x[1]})`).join(', ') || 'N/A';
+    const pos = rows.filter(r=> r.sentiment==='Positive').slice(0,5).map(r=>`• ${escapeHtml(r.comment || r.__raw.responseType || '')}`);
+    const neg = rows.filter(r=> r.sentiment==='Negative').slice(0,5).map(r=>`• ${escapeHtml(r.comment || r.__raw.responseType || '')}`);
+    const aiSummary = generateStoreSummary(storeCode, rows);
 
+    body.innerHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <p><b>Average rating:</b> ${avgRating} (${rows.length} reviews)</p>
+          <p><b>Sentiment breakdown:</b> Positive ${sentiments.Positive || 0}, Neutral ${sentiments.Neutral || 0}, Negative ${sentiments.Negative || 0}</p>
+          <p><b>Top drivers:</b> ${driverList}</p>
+          <p style="margin-top:10px"><b>Summary:</b></p>
+          <div style="background:#fafafa;padding:10px;border-radius:6px">${escapeHtml(aiSummary)}</div>
+        </div>
+        <div style="width:320px;min-width:240px">
+          <p style="margin-bottom:6px"><b>Top Positive</b></p>
+          <div style="background:#fff;padding:8px;border-radius:6px;margin-bottom:8px">${pos.join('<br>') || 'N/A'}</div>
+          <p style="margin-bottom:6px"><b>Top Negative</b></p>
+          <div style="background:#fff;padding:8px;border-radius:6px">${neg.join('<br>') || 'N/A'}</div>
+        </div>
+      </div>
+      <div style="margin-top:12px"><button id="modalDownload" class="btn">Download store data CSV</button> <button id="modalCopy" class="btn">Copy summary</button></div>
+    `;
+    document.getElementById('modalDownload').addEventListener('click', ()=> downloadStoreCSV(storeCode));
+    document.getElementById('modalCopy').addEventListener('click', ()=>{ navigator.clipboard.writeText(aiSummary).then(()=> alert('Summary copied to clipboard')); });
+  }
+  modal.style.display='flex';
+}
+function closeDrill(){ document.getElementById('drillModalBackdrop').style.display='none'; }
+
+/* store summary */
+function generateStoreSummary(storeCode, rows){
+  const n = rows.length;
+  if(n === 0) return 'No reviews available for this store.';
+  const avg = (rows.reduce((s,r)=>s + Number(r.rating||0),0) / n).toFixed(2);
+  const pos = rows.filter(r=> r.sentiment==='Positive').length;
+  const neg = rows.filter(r=> r.sentiment==='Negative').length;
+  const neut = rows.filter(r=> r.sentiment==='Neutral').length;
+  const cats = {};
+  rows.forEach(r=> { const c = classifyImprovementCategory(r.comment); cats[c] = (cats[c]||0)+1; });
+  const topCats = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>`${x[0]} (${x[1]})`).join(', ');
+  const sampleNeg = rows.find(r=> r.sentiment==='Negative' && r.comment && r.comment.length>20);
+  const samplePos = rows.find(r=> r.sentiment==='Positive' && r.comment && r.comment.length>20);
+  let summary = `Store ${storeCode} has ${n} reviews with average rating ${avg}. Sentiment split: Positive ${pos}, Neutral ${neut}, Negative ${neg}. Key themes: ${topCats || 'N/A'}.`;
+  if(sampleNeg) summary += ` Example concern: "${sampleNeg.comment.substring(0,160)}${sampleNeg.comment.length>160?'...':''}"`;
+  else if(samplePos) summary += ` Example compliment: "${samplePos.comment.substring(0,160)}${samplePos.comment.length>160?'...':''}"`;
+  return summary;
+}
+
+/* =========================
+   CSV downloads
+   ========================= */
+function downloadFilteredCSV(){
+  if(!state.data.length){ alert('No data to download.'); return; }
+  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
+  const header = cols.join(',');
+  const lines = state.data.map(r => cols.map(c => {
+    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
+    return `"${v}"`;
+  }).join(','));
+  const csv = [header].concat(lines).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'voc_filtered.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+function downloadStoreCSV(store){
+  const rows = state.rawData.filter(r=> r.storeCode === store);
+  if(!rows.length) return alert('No data for store.');
+  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
+  const header = cols.join(',');
+  const lines = rows.map(r => cols.map(c => {
+    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
+    return `"${v}"`;
+  }).join(','));
+  const csv = [header].concat(lines).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `store_${store}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+/* =========================
+   Render everything
+   ========================= */
 function renderEverything(){
   applyFilters();
   renderKPIsAndInsights();
@@ -992,44 +1006,18 @@ function renderEverything(){
 }
 
 /* =========================
-   CSV download
+   UI wiring & init
    ========================= */
-
-function downloadFilteredCSV(){
-  if(!state.data.length){ alert('No data to download.'); return; }
-  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
-  const header = cols.join(',');
-  const lines = state.data.map(r => cols.map(c => {
-    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
-    return `"${v}"`;
-  }).join(','));
-  const csv = [header].concat(lines).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'voc_filtered.csv';
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-}
-
-/* =========================
-   UI wiring: drawer & modal
-   ========================= */
-
-document.getElementById('openFiltersBtn').addEventListener('click', ()=>{
-  const w = window.innerWidth;
-  // on narrow screens show modal
-  if(w < 1100){
-    document.getElementById('modalFilters').style.display='flex';
-  } else {
-    document.getElementById('drawer').classList.toggle('hidden');
-  }
+document.getElementById('openFilters').addEventListener('click', ()=> {
+  document.getElementById('filterModalBackdrop').style.display = 'flex';
 });
-document.getElementById('closeDrawer').addEventListener('click', ()=> document.getElementById('drawer').classList.add('hidden'));
-document.getElementById('closeModalFilters').addEventListener('click', ()=> document.getElementById('modalFilters').style.display='none');
-
-document.getElementById('applyFilters').addEventListener('click', ()=> { renderEverything(); });
+document.getElementById('closeFilters').addEventListener('click', ()=> {
+  document.getElementById('filterModalBackdrop').style.display = 'none';
+});
+document.getElementById('applyFilters').addEventListener('click', ()=> {
+  document.getElementById('filterModalBackdrop').style.display = 'none';
+  renderEverything();
+});
 document.getElementById('resetFilters').addEventListener('click', ()=> {
   state.filters = {
     businessName: null,
@@ -1046,47 +1034,22 @@ document.getElementById('resetFilters').addEventListener('click', ()=> {
   renderFilterControls();
   renderEverything();
 });
-
-// mobile apply/reset
-document.getElementById('mbApply').addEventListener('click', ()=>{
-  document.getElementById('modalFilters').style.display='none';
-  renderEverything();
-});
-document.getElementById('mbReset').addEventListener('click', ()=>{
-  state.filters = {
-    businessName: null,
-    zones: new Set(),
-    states: new Set(),
-    cities: new Set(),
-    stores: new Set(),
-    mallTypes: new Set(),
-    sentiments: new Set(),
-    fys: new Set(),
-    quarters: new Set(),
-    months: new Set()
-  };
-  renderFilterControls();
-  renderEverything();
-  document.getElementById('modalFilters').style.display='none';
-});
-
-// CSV
 document.getElementById('downloadCsvBtn').addEventListener('click', ()=> downloadFilteredCSV());
+document.getElementById('closeDrill').addEventListener('click', closeDrill);
+document.getElementById('drillModalBackdrop').addEventListener('click', (e)=> { if(e.target.id === 'drillModalBackdrop') closeDrill(); });
 
-/* =========================
-   Initialization
-   ========================= */
-
+/* init */
 (async function init(){
   const raw = await loadReviewData();
-  // normalize
   state.rawData = raw.map(r=> normalizeRecord(r));
   refreshDerivedLists(state.rawData);
 
-  // default selections: set first businessName if present
+  // default: if there are FYs, select most recent
+  const defaultFY = state.derived.fys[0] || null;
+  if(defaultFY) state.filters.fys.add(defaultFY);
+
+  // default: pick first business name if present
   if(state.derived.businessNames.length) state.filters.businessName = state.derived.businessNames[0];
-  // if fy present, set first
-  if(state.derived.fys.length) state.filters.fys.add(state.derived.fys[0]);
 
   renderFilterControls();
   renderEverything();
