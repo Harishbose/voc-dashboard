@@ -1,914 +1,497 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CX – Voice of Customer Dashboard</title>
 
-  <!-- Keep Tailwind CDN (keeps your existing layout). Note: console warning is expected in dev using the CDN. -->
+  <!-- libs (CDN for demo) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/babel-standalone@7.23.2/babel.min.js"></script>
+  <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+  <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Recharts + React (only used in the example earlier — kept in case you reuse) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-
-  <!-- PapaParse for CSV parsing -->
-  <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
-
   <style>
-    /* Small custom CSS to ensure exact centering + equal KPI sizes + drawer push */
-    :root {
-      --drawer-width: 320px;
-      --kpi-height: 96px;
-      --kpi-radius: 12px;
-      --card-padding: 20px;
-    }
-
-    html, body {
-      height: 100%;
-    }
-    body.drawer-open .main-content {
-      margin-left: calc(var(--drawer-width) + 24px); /* push content when drawer open */
-      transition: margin-left 280ms ease;
-    }
-
-    /* Filter drawer styling */
-    .filter-drawer {
-      width: var(--drawer-width);
-      max-width: var(--drawer-width);
-    }
-
-    /* KPI tiles: fix size and keep aligned */
-    .kpi-grid {
-      display: flex;
-      gap: 18px;
-      justify-content: center;
-      align-items: stretch;
-      flex-wrap: wrap;
-    }
-    .kpi {
-      min-width: 220px;
-      max-width: 260px;
-      height: var(--kpi-height);
-      background: white;
-      border-radius: var(--kpi-radius);
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      align-items:center;
-      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
-    }
-
-    /* Centered header area */
-    header.dashboard-header {
-      display:flex;
-      justify-content:center;
-      align-items: center;
-      flex-direction: column;
-      gap:8px;
-      padding-top: 8px;
-      padding-bottom: 12px;
-    }
-    header.dashboard-header .title {
-      font-size: 22px;
-      font-weight: 700;
-      color: #1f2937;
-      text-align:center;
-    }
-    header.dashboard-header .subtitle {
-      font-size: 13px;
-      color: #6b7280;
-      text-align:center;
-    }
-
-    /* Keep chart cards consistent */
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: var(--card-padding);
-      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-    }
-
-    /* Comments lists styling */
-    .comments-list .comment {
-      background:#f8fafc;
-      border-radius:8px;
-      padding:12px;
-      margin-bottom:10px;
-      border: 1px solid #eef2f7;
-    }
-
-    /* Word cloud bubble */
-    .word-bubble {
-      padding: 10px 16px;
-      border-radius: 999px;
-      color: white;
-      font-weight:600;
-      display:inline-block;
-      margin:6px 8px 6px 0;
-      white-space:nowrap;
-    }
-
-    /* Key drivers bar number styling (right end) */
-    .bar-label {
-      font-weight:700;
-      color:#0b1220;
-      margin-left:12px;
-    }
-
-    /* Small responsive tweaks */
-    @media (max-width: 900px) {
-      body.drawer-open .main-content {
-        margin-left: 12px; /* don't push too far on small screens */
-      }
-      .kpi-grid { justify-content:space-around; }
-    }
+    body { font-family: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    .kpi-box { min-height:120px; display:flex; flex-direction:column; justify-content:center; align-items:center; border-radius:14px; box-shadow:0 10px 20px rgba(16,24,40,0.06); }
+    .kpi-title { color:#374151; font-weight:600; }
+    .kpi-value { font-size:34px; font-weight:700; color:#111827; }
+    /* when filter open, push the main content */
+    .drawer-open .main-container { margin-left:18rem; transition:margin-left .28s ease; }
+    @media (max-width:900px){ .drawer-open .main-container { margin-left:0; } }
+    .filter-drawer { width:18rem; }
+    .card { background:white; border-radius:12px; padding:18px; box-shadow:0 8px 20px rgba(16,24,40,0.06); }
+    .insight-card { border-radius:12px; padding:20px; background:#f3f7fb; }
+    /* consistent KPI widths */
+    .kpi-grid > div { min-width:220px; }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100">
 
-  <!-- Filter Drawer (left) -->
-  <div id="filterDrawer" class="filter-drawer fixed top-6 left-6 bg-white p-4 rounded-lg shadow-lg overflow-auto h-[90vh] hidden z-40">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold text-sky-700">Filters</h3>
-      <button id="hideFiltersBtn" class="px-3 py-1 rounded bg-sky-100 text-sky-700">Hide</button>
-    </div>
+<div id="root"></div>
 
-    <!-- Business name single-select -->
-    <div class="mb-4">
-      <label class="block text-sm font-semibold mb-2">Business Name (single-select)</label>
-      <div id="businessNameContainer" class="space-y-2"></div>
-    </div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } = Recharts;
 
-    <!-- Zones -->
-    <div class="mb-4">
-      <label class="block text-sm font-semibold mb-2">Zone</label>
-      <div id="zoneContainer" class="space-y-1"></div>
-    </div>
-
-    <!-- State with small search -->
-    <div class="mb-4">
-      <label class="block text-sm font-semibold mb-2">State</label>
-      <input id="stateSearch" class="w-full border p-2 rounded mb-2" placeholder="Search state..." />
-      <div id="stateContainer" class="max-h-40 overflow-auto space-y-1"></div>
-    </div>
-
-    <div class="mb-4">
-      <label class="block text-sm font-semibold mb-2">Sentiment</label>
-      <div id="sentimentContainer" class="space-y-1"></div>
-    </div>
-
-    <div class="mt-6">
-      <button id="resetFiltersBtn" class="w-full bg-red-500 text-white p-2 rounded">Reset Filters</button>
-    </div>
-  </div>
-
-  <!-- Small top left button to show filters -->
-  <button id="showFiltersBtn" class="fixed top-6 left-6 bg-white p-2 rounded shadow z-30">Filters</button>
-
-  <!-- Main content (will be pushed when drawer opens) -->
-  <div id="main" class="main-content transition-all duration-200 px-6 py-6">
-
-    <header class="dashboard-header mb-6">
-      <div class="title">Voice of Customer — Google Reviews</div>
-      <div class="subtitle">Interactive Analytics Dashboard</div>
-    </header>
-
-    <!-- KPI row -->
-    <div class="kpi-grid mb-6">
-      <div class="kpi text-left p-4">
-        <div class="text-sm text-gray-500">Total Reviews</div>
-        <div id="kpiTotal" class="text-3xl text-slate-800 mt-2">0</div>
-      </div>
-      <div class="kpi text-left p-4">
-        <div class="text-sm text-gray-500">% Negative Reviews</div>
-        <div id="kpiNegative" class="text-3xl text-red-600 mt-2">0%</div>
-      </div>
-      <div class="kpi text-left p-4">
-        <div class="text-sm text-gray-500">Best Rated Store</div>
-        <div id="kpiBest" class="text-3xl text-slate-800 mt-2">N/A</div>
-      </div>
-      <div class="kpi text-left p-4">
-        <div class="text-sm text-gray-500">Worst Rated Store</div>
-        <div id="kpiWorst" class="text-3xl text-slate-800 mt-2">N/A</div>
-      </div>
-    </div>
-
-    <!-- Insights cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div class="card">
-        <h3 class="font-semibold text-lg">Top Insight</h3>
-        <p id="insightTop" class="text-sm mt-2 text-gray-600">—</p>
-      </div>
-      <div class="card">
-        <h3 class="font-semibold text-lg">Top Emotion</h3>
-        <p id="insightEmotion" class="text-sm mt-2 text-gray-600">—</p>
-      </div>
-      <div class="card">
-        <h3 class="font-semibold text-lg">Store Experience</h3>
-        <p id="insightStore" class="text-sm mt-2 text-gray-600">—</p>
-      </div>
-    </div>
-
-    <!-- Main charts row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-
-      <!-- Left: Key Drivers small chart -->
-      <div class="card">
-        <h3 class="text-lg font-bold mb-4">Key Drivers of Customer Feedback</h3>
-        <div id="driversContainer">
-          <!-- Bars will be rendered here -->
-        </div>
-      </div>
-
-      <!-- Right: Sentiment pie and sentiment trend -->
-      <div class="space-y-6">
-        <div class="card">
-          <h3 class="text-lg font-bold mb-4">Sentiment Distribution</h3>
-          <div id="pieContainer" style="height:260px;"></div>
-          <div id="pieLegend" class="mt-3"></div>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-bold mb-4">Sentiment Trend Over Time (APR → MAY → JUN)</h3>
-          <div id="trendContainer" style="height:240px"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Word cloud + comments -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <div class="card">
-        <h3 class="text-lg font-bold mb-4">Emotion Word Cloud</h3>
-        <div id="wordCloud" class="min-h-[140px]"></div>
-      </div>
-
-      <div class="card">
-        <h3 class="text-lg font-bold mb-4">Comments</h3>
-        <label class="block text-sm font-semibold mb-2">Positive Comments (Top 15)</label>
-        <div id="positiveComments" class="comments-list max-h-48 overflow-y-auto mb-3"></div>
-
-        <label class="block text-sm font-semibold mb-2">Negative Comments (Top 15)</label>
-        <div id="negativeComments" class="comments-list max-h-48 overflow-y-auto"></div>
-      </div>
-    </div>
-
-    <!-- Footer: small controls -->
-    <div class="flex items-center gap-3">
-      <input id="fileInput" type="file" accept=".csv" class="hidden" />
-      <button id="uploadCsvBtn" class="px-4 py-2 bg-white rounded shadow">Upload CSV</button>
-      <button id="downloadCsvBtn" class="px-4 py-2 bg-white rounded shadow">Download CSV</button>
-      <button id="resetBtn" class="px-4 py-2 bg-red-500 text-white rounded shadow">Reset Filters</button>
-    </div>
-
-  </div>
-
-  <script>
-    /************************************************************************
-     * Corrected & final single-file dashboard (keeps your logic & layout)
-     * - Added loadFileData implementation with fetch + fallback
-     * - Drawer pushes content (body.drawer-open toggles)
-     * - KPI tiles sized equally
-     * - Removed Export PDF (button removed)
-     * - Best store logic requires minReviews threshold
-     ************************************************************************/
-
-    (function () {
-      // Short helpers
-      const byId = id => document.getElementById(id);
-      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
-      // --- CSV loader: tries fetch(filename), else uses embedded sample CSV
-      async function loadFileData(fileName) {
-        // Try to fetch file from same directory
-        if (fileName) {
-          try {
-            const resp = await fetch(fileName);
-            if (resp.ok) {
-              return await resp.text();
-            }
-          } catch (e) {
-            console.warn('CSV fetch failed:', e);
-          }
-        }
-
-        // Fallback: small embedded sample CSV (tab or comma separated headers consistent with your provided sample)
-        return `Store Name,Mall/HS,Brand,Zone,City,State,Comment Date,Month,Quarter,Financial Year,Google Rating,Sentiment,Customer Response
+/* -------------------------
+   Embedded CSV (sample from your messages)
+   Replace this string with fetch or file input in future.
+   ------------------------- */
+const csvData = `Store Name,Mall/HS,Brand,Zone,City,State,Comment Date,Month,Quarter,Financial Year,Google Rating,Sentiment,Customer Response
 AJM,High-Street,Mochi,West,Ajmer,Rajasthan,4/1/2022,APR,Q1,FY2022-2023,5,Positive,Good quality
 CBQ,High-Street,Crocs,South,Chennai,Tamil Nadu,4/1/2022,APR,Q1,FY2022-2023,5,Positive,Collections were good.
 BTM,High-Street,Mochi,North,Bhatinda,Punjab,4/2/2022,APR,Q1,FY2022-2023,5,Positive,Mochi shoes is very good
 BTM,High-Street,Mochi,North,Bhatinda,Punjab,4/2/2022,APR,Q1,FY2022-2023,5,Positive,Helping all workers.
 PGQ,High-Street,Crocs,West,Pune,Maharashtra,4/2/2022,APR,Q1,FY2022-2023,5,Positive,Wow! Good service good staff good knowledge. Keep it up
-GIQ,High-Street,Crocs,West,Gandhidam,Gujarat,4/2/2022,APR,Q1,FY2022-2023,5,Positive,Excellent
+GIQ,High-Street,Crocs,West,Gandhidam,Gujarat,4/2/2022,APR,Q1,FY2022-2023,5,Positive,Excellent In Quality
 MSM,High-Street,Mochi,South,Chennai,Tamil Nadu,4/3/2022,APR,Q1,FY2022-2023,5,Positive,New collections are available
 `;
-      }
 
-      // --- Basic parser to unify columns expected by the rest of the code
-      function parseCSVToObjects(csvText) {
-        const parsed = Papa.parse(csvText.trim(), { header: true, skipEmptyLines: true });
-        // Normalize keys (trim), map to expected columns
-        return parsed.data.map(row => {
-          // Ensure keys exist in consistent naming
-          return {
-            'Store Name': (row['Store Name'] || row['Store'] || row['Store Code'] || row['StoreName'] || '').trim(),
-            'Mall/HS': (row['Mall/HS'] || row['MallHS'] || row['Mall'] || '').trim(),
-            'Brand': (row['Brand'] || row['businessName'] || '').trim(),
-            'Zone': (row['Zone'] || row['zone'] || '').trim(),
-            'City': (row['City'] || row['city'] || '').trim(),
-            'State': (row['State'] || row['state'] || '').trim(),
-            'Comment Date': (row['Comment Date'] || row['CommentDate'] || row['CommentDate_NEW'] || '').trim(),
-            'Month': (row['Month'] || row['Mon'] || '').trim(),
-            'Quarter': (row['Quarter'] || row['Qtr'] || '').trim(),
-            'Financial Year': (row['Financial Year'] || row['FY'] || '').trim(),
-            'Google Rating': Number(row['Google Rating'] || row['Google_Rating'] || row['Customer Rating'] || row['Rating'] || 0),
-            'Sentiment': (row['Sentiment'] || '').trim().toUpperCase().replace(/\s+/g, '_'),
-            'Customer Response': (row['Customer Response'] || row['CustomerResponse'] || row['Comment'] || '').trim()
-          };
-        }).filter(r => r['Customer Response'] !== undefined);
-      }
+/* Helper: load file data (for now returns embedded csv) */
+function loadFileData() {
+  // If you want to fetch a remote CSV, replace this logic with fetch('/path/to/file.csv').then(r=>r.text())
+  return Promise.resolve(csvData);
+}
 
-      // --- Simple classification (keeps your mapping idea)
-      function classifyImprovementCategory(comment) {
-        if (!comment) return 'Miscellaneous';
-        const c = comment.toLowerCase();
-        if (/(quality|material|durability|broken|defect|poor craftsmanship|faulty)/.test(c)) return 'Product Quality';
-        if (/(staff|salesman|attentive|rude|service|behaviour)/.test(c)) return 'Store Experience';
-        if (/(price|discount|expensive|cost|overcharged)/.test(c)) return 'Pricing & Discounts';
-        if (/(stock|size|available|collection|variety)/.test(c)) return 'Inventory Management';
-        if (/(return|refund|exchange|policy)/.test(c)) return 'Return & Refund Policies';
-        if (/(wait|queue|delay)/.test(c)) return 'Wait Time / Queue Management';
-        if (/(bill|payment|charge)/.test(c)) return 'Billing & Payment Issues';
-        if (/(offer|promo|coupon|loyalty)/.test(c)) return 'Promotions & Offers';
-        if (/(support|help|assistance|resolution)/.test(c)) return 'Customer Support';
-        return 'Miscellaneous';
-      }
+/* Basic classifiers (kept from original) */
+function classifyImprovementCategory(comment = '') {
+  const s = comment.toLowerCase();
+  if (!s) return 'Other';
+  if (/(material|quality|damage|durability|defect|faulty|comfort|tear|broken|product)/.test(s)) return 'Product Quality';
+  if (/(staff|service|rude|attitude|courteous|salesman|sales)/.test(s)) return 'Staff Behaviour';
+  if (/(price|discount|expensive|cost|overcharged)/.test(s)) return 'Pricing & Discounts';
+  if (/(collection|size|stock|available|inventory|variety)/.test(s)) return 'Inventory Management';
+  if (/(return|refund|exchange|policy)/.test(s)) return 'Return & Refund Policies';
+  if (/(support|help|assistance|responsive)/.test(s)) return 'Customer Support';
+  if (/(promo|offer|loyalty|coupon|reward)/.test(s)) return 'Promotions & Offers';
+  if (/(billing|payment|charge|invoice|transaction)/.test(s)) return 'Billing & Payment Issues';
+  if (/(wait|queue|delay|slow|line)/.test(s)) return 'Wait Time / Queue Management';
+  if (/(experience|experience)/.test(s)) return 'Store Experience';
+  return 'Other';
+}
 
-      function classifyEmotion(text, sentiment) {
-        if (!text) return 'Neutral';
-        const t = text.toLowerCase();
-        if (sentiment === 'POSITIVE') {
-          if (/thank|appreciat|grate|happy|satisf/.test(t)) return 'Satisfaction';
-          return 'Appreciation';
+function classifyEmotion(comment = '', sentiment = '') {
+  const s = (comment || '').toLowerCase();
+  if (sentiment === 'Positive' || sentiment === 'POSITIVE') {
+    if (/(excellent|great|awesome|delighted)/.test(s)) return 'Satisfaction';
+    if (/(thank|appreciate)/.test(s)) return 'Gratitude';
+    if (/(happy|enjoyed)/.test(s)) return 'Happy';
+    return 'Appreciation';
+  } else if (sentiment === 'Negative' || sentiment === 'NEGATIVE') {
+    if (/(rude|worst|poor|frustrated)/.test(s)) return 'Frustration';
+    if (/(disappoint|bad)/.test(s)) return 'Disappointment';
+    return 'Disappointment';
+  } else {
+    if (/(confused|unclear|puzzled)/.test(s)) return 'Confusion';
+    return 'Neutral';
+  }
+}
+
+function extractKeywords(comment='') {
+  if (!comment) return [];
+  const words = comment.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w => w.length>3);
+  const freq = {};
+  words.forEach(w => freq[w] = (freq[w]||0)+1);
+  return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w])=>w);
+}
+
+/* -------------------------
+   Main Dashboard Component
+   ------------------------- */
+function Dashboard(){
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    businessName: 'All', zone: [], state: [], city: [], storeCode: [], sentiment: []
+  });
+
+  useEffect(() => {
+    setLoading(true);
+    loadFileData().then(text => {
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (res) => {
+          const cleaned = res.data.map(row => {
+            const rating = row['Google Rating'] ? Number(row['Google Rating']) : null;
+            const comment = row['Customer Response'] || '';
+            const sentiment = row['Sentiment'] || (rating>=4?'Positive':rating<=2?'Negative':'Neutral');
+            return {
+              ...row,
+              'Customer Rating': rating,
+              'Comment Date': row['Comment Date'],
+              ImprovementCategory: classifyImprovementCategory(comment),
+              Emotion: classifyEmotion(comment, sentiment),
+              Keywords: extractKeywords(comment),
+              Sentiment: sentiment
+            };
+          }).filter(r=>r['Customer Rating'] !== null);
+          setData(cleaned);
+          setLoading(false);
         }
-        if (sentiment === 'NEGATIVE') {
-          if (/rude|worst|frustrat|disappoint|bad|poor/.test(t)) return 'Frustration';
-          return 'Disappointment';
-        }
-        return 'Neutral';
-      }
+      });
+    });
+  },[]);
 
-      // --- Render helpers
-      function clearChildren(node) {
-        while (node.firstChild) node.removeChild(node.firstChild);
-      }
+  // FILTER HELPERS
+  const unique = (k) => Array.from(new Set(data.map(d=>d[k] || '').filter(Boolean))).sort();
 
-      function createRadio(name, value, checked, labelText, onChange) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'flex items-center gap-2';
-        const input = document.createElement('input');
-        input.type = 'radio';
-        input.name = name;
-        input.value = value;
-        input.checked = checked;
-        input.className = 'mr-2';
-        input.onchange = onChange;
-        const label = document.createElement('label');
-        label.textContent = labelText;
-        wrapper.appendChild(input);
-        wrapper.appendChild(label);
-        return wrapper;
-      }
+  const filterOptions = {
+    businessName: ['All', ...unique('Brand')],
+    zone: unique('Zone'),
+    state: unique('State'),
+    city: unique('City'),
+    storeCode: unique('Store Name'),
+    sentiment: unique('Sentiment')
+  };
 
-      function createCheckbox(value, labelText, checked, onChange) {
-        const wrapper = document.createElement('label');
-        wrapper.className = 'flex items-center gap-2';
-        const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.value = value;
-        input.checked = checked;
-        input.onchange = onChange;
-        wrapper.appendChild(input);
-        const span = document.createElement('span');
-        span.textContent = labelText;
-        wrapper.appendChild(span);
-        return wrapper;
-      }
-
-      // --- Main data + filters state
-      let rawData = [];
-      let filteredData = [];
-      const filters = {
-        businessName: '',
-        zone: [],
-        state: [],
-        sentiment: []
-      };
-
-      // --- Load CSV then prepare everything
-      async function init() {
-        const csv = await loadFileData('Test 4.csv');
-        rawData = parseCSVToObjects(csv);
-
-        // enrich rows: category, emotion, parsed date
-        rawData = rawData.map(r => {
-          const category = classifyImprovementCategory(r['Customer Response']);
-          const sentimentKey = r['Sentiment'] ? r['Sentiment'].replace(/[^A-Z]/g, '') : (r['Google Rating'] >= 4 ? 'POSITIVE' : (r['Google Rating'] === 3 ? 'NEUTRAL' : 'NEGATIVE'));
-          const emotion = classifyEmotion(r['Customer Response'], sentimentKey);
-          let parsedDate = null;
-          try {
-            parsedDate = new Date(r['Comment Date']);
-            if (isNaN(parsedDate)) parsedDate = null;
-          } catch (e) { parsedDate = null; }
-          return { ...r, ImprovementCategory: category, Emotion: emotion, ParsedDate: parsedDate, Sentiment: sentimentKey };
-        });
-
-        // initial render
-        applyFiltersAndRender();
-        wireControls();
-      }
-
-      // --- Filter UI renderers
-      function renderFilterControls() {
-        // business name radio (single-select)
-        const businessNames = Array.from(new Set(rawData.map(d => d.Brand || d['Brand'] || d['Store Name'] ))).filter(Boolean).sort();
-        const bnContainer = byId('businessNameContainer');
-        clearChildren(bnContainer);
-        bnContainer.appendChild(createRadio('businessName', '', filters.businessName === '', 'All', () => { filters.businessName = ''; applyFiltersAndRender(); }));
-        businessNames.forEach(name => {
-          bnContainer.appendChild(createRadio('businessName', name, filters.businessName === name, name, () => { filters.businessName = name; applyFiltersAndRender(); }));
-        });
-
-        // Zones
-        const zones = Array.from(new Set(rawData.map(d => d.Zone))).filter(Boolean).sort();
-        const zContainer = byId('zoneContainer');
-        clearChildren(zContainer);
-        zones.forEach(z => {
-          zContainer.appendChild(createCheckbox(z, z, filters.zone.includes(z), (e) => {
-            if (e.target.checked) filters.zone.push(z); else filters.zone = filters.zone.filter(x => x !== z);
-            applyFiltersAndRender();
-          }));
-        });
-
-        // States
-        const states = Array.from(new Set(rawData.map(d => d.State))).filter(Boolean).sort();
-        const sContainer = byId('stateContainer');
-        clearChildren(sContainer);
-        states.forEach(s => {
-          sContainer.appendChild(createCheckbox(s, s, filters.state.includes(s), (e) => {
-            if (e.target.checked) filters.state.push(s); else filters.state = filters.state.filter(x => x !== s);
-            applyFiltersAndRender();
-          }));
-        });
-
-        // Sentiment
-        const sentiments = Array.from(new Set(rawData.map(d => d.Sentiment))).filter(Boolean).sort();
-        const sentContainer = byId('sentimentContainer');
-        clearChildren(sentContainer);
-        sentiments.forEach(s => {
-          sentContainer.appendChild(createCheckbox(s, s, filters.sentiment.includes(s), (e) => {
-            if (e.target.checked) filters.sentiment.push(s); else filters.sentiment = filters.sentiment.filter(x => x !== s);
-            applyFiltersAndRender();
-          }));
-        });
-      }
-
-      // --- Apply filters to rawData => filteredData and render charts & lists
-      function applyFiltersAndRender() {
-        filteredData = rawData.filter(r => {
-          if (filters.businessName && (!r.Brand || r.Brand !== filters.businessName)) return false;
-          if (filters.zone.length && !filters.zone.includes(r.Zone)) return false;
-          if (filters.state.length && !filters.state.includes(r.State)) return false;
-          if (filters.sentiment.length && !filters.sentiment.includes(r.Sentiment)) return false;
-          return true;
-        });
-
-        renderKPIs();
-        renderKeyDrivers();
-        renderPie();
-        renderTrend();
-        renderWordCloud();
-        renderCommentsBoxes();
-        renderFilterSummary();
-        renderInsights();
-      }
-
-      // --- KPI rendering with minReviews logic for best store
-      function renderKPIs() {
-        const totalReviews = filteredData.length;
-        const negativeCount = filteredData.filter(r => r.Sentiment === 'NEGATIVE').length;
-        const percentNegative = totalReviews ? ((negativeCount / totalReviews) * 100).toFixed(1) : '0.0';
-
-        // store averages & counts
-        const storeMap = {};
-        filteredData.forEach(r => {
-          const store = r['Store Name'] || 'Unknown';
-          if (!storeMap[store]) storeMap[store] = { total:0, count:0 };
-          storeMap[store].total += (r['Google Rating'] || 0);
-          storeMap[store].count += 1;
-        });
-
-        const storeStats = Object.entries(storeMap).map(([store, v]) => ({
-          store,
-          avg: v.count ? (v.total / v.count) : 0,
-          count: v.count
-        }));
-
-        // min reviews threshold (as discussed): at least 5 reviews OR 1% of total reviews (whichever larger)
-        const minReviews = Math.max(5, Math.round(totalReviews * 0.01));
-
-        const eligible = storeStats.filter(s => s.count >= minReviews);
-
-        // choose best/worst from eligible; if none eligible fall back to store with highest count (to avoid empty)
-        let best = null, worst = null;
-        if (eligible.length > 0) {
-          best = eligible.reduce((a,b) => (a.avg > b.avg ? a : b));
-          worst = eligible.reduce((a,b) => (a.avg < b.avg ? a : b));
-        } else if (storeStats.length > 0) {
-          // fallback: pick highest-average but show counts so user sees small-sample stores
-          best = storeStats.reduce((a,b) => (a.avg > b.avg ? a : b));
-          worst = storeStats.reduce((a,b) => (a.avg < b.avg ? a : b));
+  function applyFilter(key, value, single=false){
+    setFilters(prev => {
+      const next = {...prev};
+      if(key === 'businessName'){
+        next.businessName = value;
+      } else {
+        if(single){
+          next[key] = [value];
         } else {
-          best = { store: 'N/A', avg: 0, count: 0 };
-          worst = { store: 'N/A', avg: 0, count: 0 };
+          const existing = new Set(prev[key]);
+          if(existing.has(value)) existing.delete(value); else existing.add(value);
+          next[key] = Array.from(existing);
         }
-
-        byId('kpiTotal').textContent = totalReviews;
-        byId('kpiNegative').textContent = percentNegative + '%';
-        byId('kpiBest').textContent = `${best.store} (${best.avg.toFixed(2)} • ${best.count})`;
-        byId('kpiWorst').textContent = `${worst.store} (${worst.avg.toFixed(2)} • ${worst.count})`;
       }
+      return next;
+    });
+  }
 
-      // --- Key drivers small horizontal bar chart (keeps small & fits in card)
-      function renderKeyDrivers() {
-        // Count improvement categories
-        const counts = {};
-        filteredData.forEach(r => { counts[r.ImprovementCategory] = (counts[r.ImprovementCategory] || 0) + 1; });
+  function resetFilters(){
+    setFilters({ businessName:'All', zone:[], state:[], city:[], storeCode:[], sentiment:[] });
+  }
 
-        const entries = Object.entries(counts).filter(e => e[0] !== 'Miscellaneous').sort((a,b)=>b[1]-a[1]);
-        // keep top 8 to avoid overflow
-        const top = entries.slice(0,8);
+  const filteredData = useMemo(() => {
+    return data.filter(row => {
+      if(filters.businessName && filters.businessName!=='All' && row.Brand !== filters.businessName) return false;
+      if(filters.zone.length && !filters.zone.includes(row.Zone)) return false;
+      if(filters.state.length && !filters.state.includes(row.State)) return false;
+      if(filters.city.length && !filters.city.includes(row.City)) return false;
+      if(filters.storeCode.length && !filters.storeCode.includes(row['Store Name'])) return false;
+      if(filters.sentiment.length && !filters.sentiment.includes(row.Sentiment)) return false;
+      return true;
+    });
+  }, [data, filters]);
 
-        const container = byId('driversContainer');
-        clearChildren(container);
+  // KPIs
+  const totalReviews = filteredData.length;
+  const negCount = filteredData.filter(r=>r.Sentiment && r.Sentiment.toLowerCase()==='negative').length;
+  const percNegative = totalReviews? ((negCount/totalReviews)*100).toFixed(1) : 0;
 
-        if (top.length === 0) {
-          container.innerHTML = '<div class="text-sm text-gray-500">No driver data available.</div>';
-          return;
-        }
+  // store averages + counts (for best store logic)
+  const storeMap = {};
+  filteredData.forEach(r=>{
+    const s = r['Store Name'] || r['Store Code'] || '';
+    if(!storeMap[s]) storeMap[s] = { total:0, count:0 };
+    storeMap[s].total += (r['Customer Rating']||0);
+    storeMap[s].count += 1;
+  });
 
-        // compute max for width scaling
-        const maxVal = Math.max(...top.map(t => t[1]));
+  const minReviewsForBest = 3; // <--- you can adjust
+  const storeStats = Object.entries(storeMap).map(([store,{total,count}]) => ({store, avg: (total/count), count}));
+  const bestStoreEntry = storeStats.filter(s=>s.count>=minReviewsForBest).sort((a,b)=>b.avg - a.avg)[0] || storeStats.sort((a,b)=>b.avg - a.avg)[0] || {store:'N/A', avg:0, count:0};
+  const worstStoreEntry = storeStats.sort((a,b)=>a.avg - b.avg)[0] || {store:'N/A', avg:0, count:0};
 
-        top.forEach(([name, value]) => {
-          const row = document.createElement('div');
-          row.className = 'flex items-center gap-4 mb-3';
-          const label = document.createElement('div');
-          label.style.minWidth = '130px';
-          label.textContent = name;
-          label.className = 'text-sm text-gray-700';
-          const barWrap = document.createElement('div');
-          barWrap.style.flex = '1';
-          const bar = document.createElement('div');
-          bar.style.height = '28px';
-          bar.style.borderRadius = '12px';
-          bar.style.background = 'linear-gradient(90deg,#10b981,#06b6d4, #06b6d4)';
-          bar.style.width = `${Math.round((value / maxVal) * 100)}%`;
-          bar.style.display = 'inline-block';
-          bar.style.position = 'relative';
-          // small label at right
-          const rightLabel = document.createElement('div');
-          rightLabel.className = 'bar-label';
-          rightLabel.textContent = value;
-          row.appendChild(label);
-          barWrap.appendChild(bar);
-          row.appendChild(barWrap);
-          row.appendChild(rightLabel);
-          container.appendChild(row);
-        });
-      }
+  // Key drivers (improvement categories)
+  const catCounts = {};
+  filteredData.forEach(r=>{
+    const c = r.ImprovementCategory || 'Other';
+    catCounts[c] = (catCounts[c] || 0) + 1;
+  });
+  const keyDrivers = Object.entries(catCounts).map(([name, value])=>({name, value})).sort((a,b)=>b.value - a.value);
 
-      // --- Simple donut pie (SVG)
-      function renderPie() {
-        const counts = { POSITIVE:0, NEGATIVE:0, NEUTRAL:0 };
-        filteredData.forEach(r => { counts[r.Sentiment] = (counts[r.Sentiment]||0) + 1; });
-        const total = counts.POSITIVE + counts.NEGATIVE + counts.NEUTRAL;
-        const data = [
-          {name:'POSITIVE', value: counts.POSITIVE, color:'#10b981'},
-          {name:'NEUTRAL', value: counts.NEUTRAL, color:'#f59e0b'},
-          {name:'NEGATIVE', value: counts.NEGATIVE, color:'#ef4444'}
-        ];
+  // Sentiment donut
+  const sentimentCounts = { Positive:0, Neutral:0, Negative:0 };
+  filteredData.forEach(r=>{
+    const s = (r.Sentiment||'Neutral');
+    if(s.toLowerCase()==='positive') sentimentCounts.Positive++;
+    else if(s.toLowerCase()==='negative') sentimentCounts.Negative++;
+    else sentimentCounts.Neutral++;
+  });
+  const pieData = [
+    { name:'Positive', value: sentimentCounts.Positive },
+    { name:'Neutral', value: sentimentCounts.Neutral },
+    { name:'Negative', value: sentimentCounts.Negative }
+  ];
 
-        const container = byId('pieContainer');
-        clearChildren(container);
-        const svgNS = "http://www.w3.org/2000/svg";
-        const size = 260;
-        const cx = size/2, cy = size/2, r = 80;
-        const svg = document.createElementNS(svgNS, 'svg');
-        svg.setAttribute('width', size);
-        svg.setAttribute('height', size);
-        let start = 0;
-        data.forEach(d => {
-          const portion = total ? d.value / total : 0;
-          const end = start + portion;
-          const large = portion > 0.5 ? 1 : 0;
-          const x1 = cx + r * Math.cos(2*Math.PI*start - Math.PI/2);
-          const y1 = cy + r * Math.sin(2*Math.PI*start - Math.PI/2);
-          const x2 = cx + r * Math.cos(2*Math.PI*end - Math.PI/2);
-          const y2 = cy + r * Math.sin(2*Math.PI*end - Math.PI/2);
-          const path = document.createElementNS(svgNS, 'path');
-          const dstr = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-          path.setAttribute('d', dstr);
-          path.setAttribute('fill', d.color);
-          svg.appendChild(path);
-          start = end;
-        });
-        container.appendChild(svg);
+  // Emotion word cloud simplified (top emotions)
+  const emotionCounts = {};
+  filteredData.forEach(r => {
+    const e = r.Emotion || 'Neutral';
+    emotionCounts[e] = (emotionCounts[e]||0) + 1;
+  });
+  const emotionData = Object.entries(emotionCounts).map(([k,v])=>({text:k, value:v})).sort((a,b)=>b.value - a.value);
 
-        // legend
-        const legend = byId('pieLegend');
-        clearChildren(legend);
-        data.forEach(d => {
-          const div = document.createElement('div');
-          div.className = 'flex items-center gap-3 mb-1';
-          const sw = document.createElement('span');
-          sw.style.width = '14px';
-          sw.style.height = '14px';
-          sw.style.background = d.color;
-          sw.style.display = 'inline-block';
-          sw.style.borderRadius = '3px';
-          const txt = document.createElement('div');
-          txt.innerHTML = `<strong class="mr-2">${d.name}</strong> ${total ? ((d.value/total*100).toFixed(1) + '%') : '0%'} (${d.value})`;
-          div.appendChild(sw);
-          div.appendChild(txt);
-          legend.appendChild(div);
-        });
-      }
+  // Trend APR -> MAY -> JUN (static months if present)
+  const monthsOrder = ['APR','MAY','JUN'];
+  const trendData = monthsOrder.map(m=>{
+    const monthRows = filteredData.filter(r => (r.Month||'').toUpperCase() === m);
+    return {
+      month: m,
+      Positive: monthRows.filter(r=>r.Sentiment && r.Sentiment.toLowerCase()==='positive').length,
+      Neutral: monthRows.filter(r=>r.Sentiment && r.Sentiment.toLowerCase()==='neutral').length,
+      Negative: monthRows.filter(r=>r.Sentiment && r.Sentiment.toLowerCase()==='negative').length
+    };
+  });
 
-      // --- Sentiment trend APR->MAY->JUN static
-      function renderTrend() {
-        const months = ['APR','MAY','JUN'];
-        const counts = months.map(m => {
-          const monthRows = filteredData.filter(r => (r.Month && r.Month.toUpperCase().includes(m)) || (r['Comment Date'] && new Date(r['Comment Date']).toLocaleDateString().includes(m)));
-          return {
-            month: m,
-            POSITIVE: monthRows.filter(r => r.Sentiment === 'POSITIVE').length,
-            NEGATIVE: monthRows.filter(r => r.Sentiment === 'NEGATIVE').length,
-            NEUTRAL: monthRows.filter(r => r.Sentiment === 'NEUTRAL').length
-          };
-        });
+  // top positive/negative comments
+  const positiveComments = filteredData.filter(r=>r.Sentiment && r.Sentiment.toLowerCase()==='positive').sort((a,b)=> new Date(b['Comment Date']) - new Date(a['Comment Date']));
+  const negativeComments = filteredData.filter(r=>r.Sentiment && r.Sentiment.toLowerCase()==='negative').sort((a,b)=> new Date(b['Comment Date']) - new Date(a['Comment Date']));
 
-        const container = byId('trendContainer');
-        clearChildren(container);
+  // strategic insights (simple derived)
+  const topDriver = keyDrivers[0] || { name:'N/A', value:0 };
+  const topEmotion = emotionData[0] || { text:'N/A', value:0 };
 
-        // small simple SVG line chart with points and labels
-        const svgNS = "http://www.w3.org/2000/svg";
-        const w = 480, h = 220, pad = 40;
-        const svg = document.createElementNS(svgNS, 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-        // compute max value for scaling
-        const maxVal = Math.max(...counts.flatMap(c => [c.POSITIVE, c.NEGATIVE, c.NEUTRAL]), 1);
-        const scaleY = v => h - pad - ((v / maxVal) * (h - 2*pad));
-        const xAt = i => pad + i * ((w - 2*pad) / (months.length - 1));
+  // drawer push class on body
+  useEffect(()=> {
+    if(isFilterOpen) document.body.classList.add('drawer-open'); else document.body.classList.remove('drawer-open');
+  },[isFilterOpen]);
 
-        // gridlines
-        for (let gy = 0; gy <= 4; gy++) {
-          const y = pad + gy * ((h - 2*pad)/4);
-          const line = document.createElementNS(svgNS, 'line');
-          line.setAttribute('x1', pad);
-          line.setAttribute('x2', w - pad);
-          line.setAttribute('y1', y);
-          line.setAttribute('y2', y);
-          line.setAttribute('stroke', '#e6e6e6');
-          line.setAttribute('stroke-dasharray', '4 4');
-          svg.appendChild(line);
-        }
+  if(loading) return <div className="p-8 text-center">Loading dashboard...</div>;
 
-        // for each series draw polyline & points: POSITIVE green, NEGATIVE red, NEUTRAL gold
-        [['POSITIVE','#10b981'], ['NEGATIVE','#ef4444'], ['NEUTRAL','#f59e0b']].forEach(([k,color]) => {
-          const points = counts.map((c,i) => `${xAt(i)},${scaleY(c[k])}`).join(' ');
-          const poly = document.createElementNS(svgNS, 'polyline');
-          poly.setAttribute('points', points);
-          poly.setAttribute('fill', 'none');
-          poly.setAttribute('stroke', color);
-          poly.setAttribute('stroke-width', 3);
-          poly.setAttribute('stroke-linecap','round');
-          svg.appendChild(poly);
+  return (
+    <div className="min-h-screen">
+      {/* Filter Drawer */}
+      <div className={`fixed top-0 left-0 z-40 h-full bg-white filter-drawer shadow-lg p-4 overflow-y-auto transform ${isFilterOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform`}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-2xl font-semibold text-blue-800">Filters</h3>
+          <button className="bg-blue-100 px-3 py-1 rounded" onClick={()=>setIsFilterOpen(false)}>Hide</button>
+        </div>
 
-          // points + text
-          counts.forEach((c,i) => {
-            const cx = xAt(i), cy = scaleY(c[k]);
-            const circle = document.createElementNS(svgNS,'circle');
-            circle.setAttribute('cx',cx);
-            circle.setAttribute('cy',cy);
-            circle.setAttribute('r',5);
-            circle.setAttribute('fill','#fff');
-            circle.setAttribute('stroke', color);
-            circle.setAttribute('stroke-width',2);
-            svg.appendChild(circle);
+        {/* Business single-select */}
+        <div className="mb-4">
+          <div className="text-sm font-medium mb-2">Business Name (single-select)</div>
+          {filterOptions.businessName.map(b => (
+            <label key={b} className="flex items-center mb-2 cursor-pointer">
+              <input type="radio" name="brand" checked={filters.businessName===b} onChange={()=>applyFilter('businessName', b)} className="mr-3" />
+              <span>{b}</span>
+            </label>
+          ))}
+        </div>
 
-            const txt = document.createElementNS(svgNS,'text');
-            txt.setAttribute('x', cx);
-            txt.setAttribute('y', cy - 10);
-            txt.setAttribute('font-size', '11');
-            txt.setAttribute('fill', '#111827');
-            txt.setAttribute('text-anchor','middle');
-            txt.textContent = c[k];
-            svg.appendChild(txt);
-          });
-        });
+        <div className="mb-4">
+          <div className="text-sm font-medium mb-2">Zone</div>
+          {filterOptions.zone.map(z => (
+            <label key={z} className="flex items-center mb-2">
+              <input type="checkbox" checked={filters.zone.includes(z)} onChange={()=>applyFilter('zone', z)} className="mr-3" />
+              <span>{z}</span>
+            </label>
+          ))}
+        </div>
 
-        // x labels
-        counts.forEach((c,i) => {
-          const lx = document.createElementNS(svgNS,'text');
-          lx.setAttribute('x', xAt(i));
-          lx.setAttribute('y', h - pad + 22);
-          lx.setAttribute('font-size', '12');
-          lx.setAttribute('text-anchor','middle');
-          lx.setAttribute('fill', '#374151');
-          lx.textContent = c.month;
-          svg.appendChild(lx);
-        });
+        <div className="mb-4">
+          <div className="text-sm font-medium mb-2">State</div>
+          <input type="text" placeholder="Search state..." className="w-full p-2 mb-2 border rounded" onChange={()=>{}}/>
+          <div style={{maxHeight:220, overflowY:'auto'}}>
+            {filterOptions.state.map(s => (
+              <label key={s} className="flex items-center mb-2">
+                <input type="checkbox" checked={filters.state.includes(s)} onChange={()=>applyFilter('state', s)} className="mr-3"/>
+                <span>{s}</span>
+              </label>
+            ))}
+          </div>
+        </div>
 
-        // small caption
-        const cap = document.createElementNS(svgNS,'text');
-        cap.setAttribute('x', w/2);
-        cap.setAttribute('y', h - 6);
-        cap.setAttribute('text-anchor','middle');
-        cap.setAttribute('fill', '#6b7280');
-        cap.setAttribute('font-size','12');
-        cap.textContent = 'APR — MAY — JUN (static)';
-        svg.appendChild(cap);
+        <div className="flex gap-2 mt-4">
+          <button className="flex-1 bg-gray-200 px-3 py-2 rounded" onClick={()=>setIsFilterOpen(false)}>Apply</button>
+          <button className="flex-1 bg-red-500 text-white px-3 py-2 rounded" onClick={resetFilters}>Reset Filters</button>
+        </div>
+      </div>
 
-        container.appendChild(svg);
-      }
+      {/* Main content */}
+      <div className="main-container p-8">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-extrabold text-gray-800">Voice of Customer — Google Reviews</h1>
+          <p className="text-sm text-gray-500">Interactive Analytics Dashboard</p>
+        </div>
 
-      // --- Word cloud (simple bubble list)
-      function renderWordCloud() {
-        // count emotions
-        const counts = {};
-        filteredData.forEach(r => { counts[r.Emotion] = (counts[r.Emotion] || 0) + 1; });
-        const emotionsOrder = ['Satisfaction','Appreciation','Happy','Gratitude','Neutral','Confusion','Frustration','Disappointment'];
-        const container = byId('wordCloud');
-        clearChildren(container);
+        {/* Buttons: show filters */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <button className="bg-white px-4 py-2 rounded shadow" onClick={()=>setIsFilterOpen(true)}>Filters</button>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="bg-white px-4 py-2 rounded shadow" onClick={()=>{ /* placeholder upload */ }}>Upload CSV</button>
+            <button className="bg-white px-4 py-2 rounded shadow" onClick={()=>{
+              // allow CSV download of filtered data
+              const csv = Papa.unparse(filteredData);
+              const blob = new Blob([csv], {type:'text/csv'});
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href=url; a.download='filtered.csv'; a.click(); URL.revokeObjectURL(url);
+            }}>Download CSV</button>
+            <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={resetFilters}>Reset Filters</button>
+          </div>
+        </div>
 
-        emotionsOrder.forEach(e => {
-          const val = counts[e] || 0;
-          if (val === 0) return; // skip zeroes to keep clean
-          const div = document.createElement('span');
-          div.className = 'word-bubble';
-          // color mapping to match screenshot style
-          const color = e === 'Satisfaction' ? '#10b981' :
-                        e === 'Appreciation' ? '#22c55e' :
-                        e === 'Happy' ? '#34d399' :
-                        e === 'Gratitude' ? '#6ee7b7' :
-                        e === 'Neutral' ? '#f59e0b' :
-                        e === 'Confusion' ? '#fb923c' :
-                        e === 'Frustration' ? '#f43f5e' :
-                        e === 'Disappointment' ? '#ef4444' : '#6b7280';
-          div.style.background = color;
-          div.style.fontSize = `${12 + Math.min(24, val*2)}px`;
-          div.textContent = `${e} (${val})`;
-          container.appendChild(div);
-        });
+        {/* KPI row */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 kpi-grid mb-6">
+          <div className="kpi-box card text-center">
+            <div className="kpi-title">Total Reviews</div>
+            <div className="kpi-value">{totalReviews}</div>
+          </div>
+          <div className="kpi-box card text-center">
+            <div className="kpi-title">% Negative Reviews</div>
+            <div className="kpi-value" style={{color:'#dc2626'}}>{percNegative}%</div>
+          </div>
+          <div className="kpi-box card text-center">
+            <div className="kpi-title">Best Rated Store</div>
+            <div className="kpi-value">{bestStoreEntry.store} ({bestStoreEntry.avg ? bestStoreEntry.avg.toFixed(2):'N/A'} • {bestStoreEntry.count})</div>
+          </div>
+          <div className="kpi-box card text-center">
+            <div className="kpi-title">Worst Rated Store</div>
+            <div className="kpi-value">{worstStoreEntry.store} ({worstStoreEntry.avg ? worstStoreEntry.avg.toFixed(2):'N/A'} • {worstStoreEntry.count})</div>
+          </div>
+        </div>
 
-        if (container.children.length === 0) container.innerHTML = '<div class="text-sm text-gray-500">No emotion tags to show.</div>';
-      }
+        {/* Strategic insights row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="insight-card">
+            <h3 className="font-semibold text-lg mb-2">Top Insight</h3>
+            <p className="text-gray-700">Top driver: <strong>{topDriver.name}</strong> — mentioned in {topDriver.value} reviews.</p>
+          </div>
+          <div className="insight-card">
+            <h3 className="font-semibold text-lg mb-2">Top Emotion</h3>
+            <p className="text-gray-700">Top emotion: <strong>{topEmotion.text}</strong> — mentioned {topEmotion.value} time(s).</p>
+          </div>
+          <div className="insight-card">
+            <h3 className="font-semibold text-lg mb-2">Store Experience</h3>
+            <p className="text-gray-700">This was the most mentioned theme and key driver of both praise and criticism.</p>
+          </div>
+        </div>
 
-      // --- Comments
-      function renderCommentsBoxes() {
-        const pos = byId('positiveComments');
-        const neg = byId('negativeComments');
-        clearChildren(pos); clearChildren(neg);
+        {/* Visuals row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Key drivers small bar chart */}
+          <div className="card">
+            <h3 className="text-xl font-semibold mb-4">Key Drivers of Customer Feedback</h3>
+            <div style={{height:220}}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={keyDrivers.map(k=>({name:k.name, value:k.value}))} layout="vertical" margin={{left:20}}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={140} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="url(#grad)" radius={[10,10,10,10]}>
+                    <defs>
+                      <linearGradient id="grad" x1="0" x2="1">
+                        <stop offset="0%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#06b6d4" />
+                      </linearGradient>
+                    </defs>
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="flex justify-end mt-2 text-sm font-semibold">
+                {keyDrivers.length>0 && <span className="mr-4">{keyDrivers[0].name} ({keyDrivers[0].value})</span>}
+              </div>
+            </div>
+          </div>
 
-        const positives = filteredData.filter(r => r.Sentiment === 'POSITIVE').slice(0,15);
-        const negatives = filteredData.filter(r => r.Sentiment === 'NEGATIVE').slice(0,15);
+          {/* Sentiment donut */}
+          <div className="card">
+            <h3 className="text-xl font-semibold mb-4">Sentiment Distribution</h3>
+            <div style={{height:240}}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" innerRadius={50} outerRadius={80} paddingAngle={3} labelLine={false}>
+                    {pieData.map((entry, index)=>(
+                      <Cell key={index} fill={entry.name==='Positive' ? '#10b981' : entry.name==='Negative' ? '#ef4444' : '#f59e0b'} />
+                    ))}
+                  </Pie>
+                  <Legend layout="vertical" verticalAlign="bottom" align="left" />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-2 text-sm">
+                <div><span className="inline-block w-3 h-3 bg-green-500 mr-2"></span><strong>POSITIVE</strong> {pieData[0].value} ({pieData[0].value===0?0:((pieData[0].value/Math.max(1,totalReviews))*100).toFixed(1)}%)</div>
+                <div><span className="inline-block w-3 h-3 bg-yellow-500 mr-2"></span><strong>NEUTRAL</strong> {pieData[1].value}</div>
+                <div><span className="inline-block w-3 h-3 bg-red-500 mr-2"></span><strong>NEGATIVE</strong> {pieData[2].value}</div>
+              </div>
+            </div>
+          </div>
 
-        positives.forEach(r => {
-          const d = document.createElement('div'); d.className = 'comment';
-          d.innerHTML = `<div class="font-semibold">😊 ${r['Customer Response'].slice(0,220)}</div>
-            <div class="text-xs text-gray-500 mt-1">Store: ${r['Store Name'] || ''} | Date: ${r['Comment Date'] || ''}</div>`;
-          pos.appendChild(d);
-        });
+          {/* Trend chart */}
+          <div className="card">
+            <h3 className="text-xl font-semibold mb-4">Sentiment Trend over Time (APR → MAY → JUN)</h3>
+            <div style={{height:240}}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{left:0}}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="Positive" stroke="#10b981" strokeWidth={2} dot={{r:4}}/>
+                  <Line type="monotone" dataKey="Negative" stroke="#ef4444" strokeWidth={2} dot={{r:4}}/>
+                  <Line type="monotone" dataKey="Neutral" stroke="#f59e0b" strokeWidth={2} dot={{r:4}}/>
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="text-center mt-2 text-sm text-gray-500">APR — MAY — JUN (static)</div>
+            </div>
+          </div>
+        </div>
 
-        negatives.forEach(r => {
-          const d = document.createElement('div'); d.className = 'comment';
-          d.innerHTML = `<div class="font-semibold">😠 ${r['Customer Response'].slice(0,220)}</div>
-            <div class="text-xs text-gray-500 mt-1">Store: ${r['Store Name'] || ''} | Date: ${r['Comment Date'] || ''}</div>`;
-          neg.appendChild(d);
-        });
+        {/* Word cloud + comments */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="card">
+            <h3 className="text-xl font-semibold mb-4">Emotion Word Cloud</h3>
+            <div className="flex flex-wrap gap-4 items-start" style={{minHeight:180}}>
+              {emotionData.length ? emotionData.map(e=>(
+                <div key={e.text} style={{background:'#10b981', color:'white', padding:'10px 22px', borderRadius:999, fontSize: Math.min(28, 12 + e.value*3)}}>
+                  {e.text} ({e.value})
+                </div>
+              )) : <div className="text-gray-500">No emotions</div>}
+            </div>
+          </div>
 
-        if (positives.length === 0) pos.innerHTML = '<div class="text-sm text-gray-500">No positive comments.</div>';
-        if (negatives.length === 0) neg.innerHTML = '<div class="text-sm text-gray-500">No negative comments.</div>';
-      }
+          <div className="card col-span-2">
+            <h3 className="text-xl font-semibold mb-4">Comments</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold mb-2">Positive Comments (Top 15)</h4>
+                <div style={{maxHeight:280, overflowY:'auto'}}>
+                  {positiveComments.length ? positiveComments.slice(0,15).map((r,i)=>(
+                    <div key={i} className="mb-3 p-3 rounded border border-gray-100 bg-gray-50">
+                      <div className="font-semibold text-lg">😊 {r['Customer Response']}</div>
+                      <div className="text-sm text-gray-500 mt-1">Store: {r['Store Name']} | Date: {r['Comment Date']}</div>
+                    </div>
+                  )) : <div className="text-gray-500">No positive comments.</div>}
+                </div>
+              </div>
 
-      // --- Filter summary & insight rendering (keeps strategic-insights)
-      function renderFilterSummary() {
-        // nothing complex here; keep visible in console if needed
-        renderFilterControls();
-      }
+              <div>
+                <h4 className="font-semibold mb-2">Negative Comments (Top 15)</h4>
+                <div style={{maxHeight:280, overflowY:'auto'}}>
+                  {negativeComments.length ? negativeComments.slice(0,15).map((r,i)=>(
+                    <div key={i} className="mb-3 p-3 rounded border border-gray-100 bg-gray-50">
+                      <div className="font-semibold text-lg">😠 {r['Customer Response']}</div>
+                      <div className="text-sm text-gray-500 mt-1">Store: {r['Store Name']} | Date: {r['Comment Date']}</div>
+                    </div>
+                  )) : <div className="text-gray-500">No negative comments.</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      function renderInsights() {
-        // Top driver
-        const counts = {};
-        filteredData.forEach(r => counts[r.ImprovementCategory] = (counts[r.ImprovementCategory]||0) + 1);
-        const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0] || ['N/A', 0];
-        byId('insightTop').textContent = `Top driver: ${top[0]} — mentioned in ${top[1]} reviews.`;
-        const emotionCounts = {};
-        filteredData.forEach(r => emotionCounts[r.Emotion] = (emotionCounts[r.Emotion]||0)+1);
-        const topEmotion = Object.entries(emotionCounts).sort((a,b)=>b[1]-a[1])[0] || ['N/A',0];
-        byId('insightEmotion').textContent = `Top emotion: ${topEmotion[0]} — mentioned ${topEmotion[1]} times.`;
-        byId('insightStore').textContent = `This was the most mentioned theme and key driver of both praise and criticism.`;
-      }
+        <div className="mb-12 text-center text-gray-400">Dashboard built from your provided CSV sample. Replace CSV with your live data for production.</div>
+      </div>
+    </div>
+  );
+}
 
-      // --- Wire UI controls
-      function wireControls() {
-        // Show/hide filters (drawer pushes content)
-        const drawer = byId('filterDrawer');
-        const showBtn = byId('showFiltersBtn');
-        const hideBtn = byId('hideFiltersBtn');
-
-        showBtn.addEventListener('click', () => {
-          drawer.style.display = 'block';
-          document.body.classList.add('drawer-open');
-          showBtn.style.display = 'none';
-        });
-        hideBtn.addEventListener('click', () => {
-          drawer.style.display = 'none';
-          document.body.classList.remove('drawer-open');
-          showBtn.style.display = 'block';
-        });
-
-        // Reset filters button
-        byId('resetFiltersBtn').addEventListener('click', () => {
-          filters.businessName = '';
-          filters.zone = [];
-          filters.state = [];
-          filters.sentiment = [];
-          applyFiltersAndRender();
-        });
-        byId('resetBtn').addEventListener('click', () => {
-          filters.businessName = '';
-          filters.zone = [];
-          filters.state = [];
-          filters.sentiment = [];
-          applyFiltersAndRender();
-        });
-
-        // upload CSV button
-        const fileInput = byId('fileInput');
-        byId('uploadCsvBtn').addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', async (ev) => {
-          const f = ev.target.files[0];
-          if (!f) return;
-          const txt = await f.text();
-          rawData = parseCSVToObjects(txt);
-          rawData = rawData.map(r => {
-            const category = classifyImprovementCategory(r['Customer Response']);
-            const sentimentKey = r['Sentiment'] ? r['Sentiment'].replace(/[^A-Z]/g, '') : (r['Google Rating'] >= 4 ? 'POSITIVE' : (r['Google Rating'] === 3 ? 'NEUTRAL' : 'NEGATIVE'));
-            const emotion = classifyEmotion(r['Customer Response'], sentimentKey);
-            return { ...r, ImprovementCategory: category, Emotion: emotion, Sentiment: sentimentKey };
-          });
-          applyFiltersAndRender();
-        });
-
-        // download CSV of filteredData
-        byId('downloadCsvBtn').addEventListener('click', () => {
-          const rows = filteredData.length ? filteredData : rawData;
-          if (!rows || rows.length === 0) { alert('No data to export'); return; }
-          const headers = Object.keys(rows[0]);
-          const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => {
-            // escape quotes & commas
-            const v = (r[h] !== undefined && r[h] !== null) ? String(r[h]) : '';
-            return '"' + v.replace(/"/g, '""') + '"';
-          }).join(','))).join('\n');
-          const blob = new Blob([csv], {type:'text/csv'});
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'voc_export.csv';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-        });
-
-        // small search for state filter
-        byId('stateSearch').addEventListener('input', (e) => {
-          const q = e.target.value.toLowerCase();
-          const container = byId('stateContainer');
-          Array.from(container.children).forEach(label => {
-            label.style.display = label.textContent.toLowerCase().includes(q) ? '' : 'none';
-          });
-        });
-      }
-
-      // Start
-      init();
-
-    })();
-  </script>
+/* Render */
+ReactDOM.createRoot(document.getElementById('root')).render(<Dashboard/>);
+</script>
 </body>
 </html>
