@@ -5,311 +5,266 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Voice of Customer — Google Reviews Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-<!-- html2canvas and jspdf removed as PDF export isn't required -->
 <style>
 :root{
   --bg:#f3f4f6;
   --card:#ffffff;
   --muted:#6b7280;
-  --accent:#C9B037; /* muted gold */
-  --text:#2b2b2b; /* graphite black */
-  --positive:#10b981;
-  --negative:#ef4444;
-  --neutral:#f59e0b;
-  --shadow: 0 8px 22px rgba(11,15,25,0.06);
+  --shadow: 0 6px 18px rgba(15,23,42,0.06);
+  --accent-gold: #b8860b; /* warm gold */
+  --accent-rose: #d48a8a; /* subtle rose if needed */
+  --positive: #10b981;
+  --negative: #ef4444;
+  --neutral: #f59e0b;
   font-family: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
-  -webkit-font-smoothing:antialiased;
+  color: #0b1220;
 }
 
-/* Layout */
-*{box-sizing:border-box}
-html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-size:14px; line-height:1.35; padding:18px;}
-.container{max-width:1300px;margin:0 auto;}
+/* Page */
+html,body{height:100%; margin:0; background:var(--bg); -webkit-font-smoothing:antialiased;}
+.container{max-width:1200px; margin:18px auto; padding:18px; box-sizing:border-box;}
 
 /* Header */
 .header {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:6px;
-  margin-bottom:14px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:14px;
 }
-.header .title {
-  font-size:22px;
-  font-weight:800;
-  letter-spacing:0.2px;
+.brand {
+  flex:1; text-align:center;
 }
-.header .subtitle { color:var(--muted); font-size:13px; }
+.title { font-weight:700; font-size:22px; margin:2px 0; letter-spacing:0.2px; color:#0b1220; }
+.subtitle { font-size:13px; color:var(--muted); margin-top:4px; }
 
-/* KPI row - KEEP COMPACT SIZE */
-.kpi-row{display:flex;gap:14px;align-items:center;justify-content:center;margin:14px 0;flex-wrap:wrap}
-.kpi {
-  background:var(--card);
-  padding:12px 18px;
-  border-radius:12px;
-  min-width:160px;
-  box-shadow:var(--shadow);
-  text-align:center;
+/* Filter button top-left */
+.left-controls { display:flex; align-items:center; gap:10px; width:220px; }
+.filter-btn {
+  background:var(--card); border-radius:8px; padding:9px 12px; border:1px solid rgba(2,6,23,0.06);
+  cursor:pointer; box-shadow:var(--shadow); display:inline-flex; align-items:center; gap:8px;
 }
-.kpi .label{font-size:13px;color:var(--muted)}
-.kpi .val{font-weight:800;font-size:20px;margin-top:6px;color:var(--text)}
+.filter-btn b{font-weight:600; color:#0b1220;}
+.header-accent { height:8px; border-radius:8px; background: linear-gradient(90deg, rgba(184,134,11,0.15), rgba(212,138,138,0.08)); margin-bottom:16px; }
 
-/* Controls */
-.controls{display:flex;gap:10px;align-items:center; justify-content:center; margin-bottom:8px;}
-.btn{padding:8px 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:#fff;cursor:pointer}
-.btn.primary{background:var(--accent); color:white; border:none; font-weight:600}
-.btn.ghost{background:transparent; border:1px solid rgba(0,0,0,0.06)}
+/* KPI row */
+.kpi-row { display:flex; gap:14px; align-items:center; justify-content:flex-start; margin-bottom:18px; flex-wrap:wrap; }
+.kpi { min-width:220px; background:var(--card); border-radius:12px; padding:18px; box-shadow:var(--shadow); }
+.kpi .label{font-size:14px; color:var(--muted); margin-bottom:8px}
+.kpi .value{font-size:26px; font-weight:700; color:#0b1220}
 
-/* Layout grid — preserve original layout, but constrained to container to avoid horizontal scroll */
-.layout { display:grid; grid-template-columns: 1fr 380px; gap:14px; align-items:start; }
+/* controls right of header (download CSV) */
+.right-controls { display:flex; gap:8px; align-items:center; }
 
-/* Card style */
-.card{background:var(--card); border-radius:12px; padding:14px; box-shadow:var(--shadow); overflow:hidden}
-.card h3{margin:0 0 10px 0;color:var(--accent); font-size:16px}
+/* Layout grid */
+.main-grid { display:grid; grid-template-columns: 1fr 360px; gap:16px; align-items:start; }
+.left-col { display:flex; flex-direction:column; gap:16px; }
+.right-col { display:flex; flex-direction:column; gap:16px; }
 
-/* Drivers chart area bigger */
-.drivers { min-height:220px; display:flex; flex-direction:column; gap:8px; }
+/* Cards */
+.card { background:var(--card); border-radius:12px; padding:16px; box-shadow:var(--shadow); overflow:hidden; }
+.card h3{ margin:0 0 12px 0; font-size:18px; color:#0b1220 }
+.pills {display:flex; gap:8px; flex-wrap:wrap}
 
-/* Pills */
-.pills{display:flex;gap:8px;flex-wrap:wrap}
+/* Charts placeholders */
+.svg-chart{ width:100%; height:220px }
 
 /* Word cloud */
-.word-cloud{min-height:140px; display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.word-cloud { min-height:140px; display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; }
 
-/* heatmap */
-.heatmap-wrap{overflow:auto;border-radius:8px;padding:8px;background:linear-gradient(180deg,#fff,#fbfdff);}
-.heatmap-table{border-collapse:collapse;width:100%}
-.heatmap-table th, .heatmap-table td{padding:8px 10px;border:1px solid rgba(2,6,23,0.04);white-space:nowrap}
-.heatmap-table th{background:#fff;position:sticky;top:0;z-index:2}
+/* Heatmap table */
+.heatmap-wrap{ overflow:auto; border-radius:8px; padding:8px; background:linear-gradient(180deg,#fff,#fbfdff) }
+.heatmap-table{ border-collapse:collapse; width:100% }
+.heatmap-table th, .heatmap-table td{ padding:8px 10px; border:1px solid rgba(2,6,23,0.06); white-space:nowrap; font-size:13px }
+.heatmap-table th{ background:#fff; position:sticky; top:0 }
 
 /* comments */
-.comments{display:grid;grid-template-columns:1fr 1fr; gap:14px}
-.comment-card{background:#fbfbfb;border-radius:8px;padding:10px;border:1px solid rgba(2,6,23,0.04)}
-.comment-meta{font-size:12px;color:var(--muted);margin-top:8px}
+.comments-row { display:flex; gap:12px; }
+.comment-column { flex:1; max-height:360px; overflow:auto; }
+.comment-card { background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(2,6,23,0.04) }
 
-/* modal/backdrop for filters and drilldown */
-.modal-backdrop{position:fixed;inset:0;background:rgba(11,15,25,0.45);display:none;align-items:center;justify-content:center;z-index:9999}
-.modal{background:var(--card);border-radius:12px;padding:18px;max-width:740px;width:92%;max-height:86vh;overflow:auto;box-shadow:var(--shadow)}
-.modal h4{margin:0 0 10px 0;color:var(--text)}
+/* strategic insights grid */
+.insights { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:6px; }
+.insight-card{ border-radius:12px; padding:14px; min-height:120px; box-shadow:var(--shadow); background:#fff; }
 
-/* filter drawer trigger */
-.filter-toggle{position:fixed;left:20px;top:20px;z-index:1000}
+/* drawer (popout left) */
+.drawer-backdrop{ position:fixed; inset:0; display:none; align-items:flex-start; justify-content:flex-start; z-index:9998; }
+.drawer { width:360px; max-width:92vw; height:100vh; background:var(--card); box-shadow: 12px 0 40px rgba(2,6,23,0.15); padding:14px; overflow:auto; border-right:6px solid rgba(184,134,11,0.09); }
+.drawer .close { display:flex; justify-content:flex-end; margin-bottom:8px }
+.collapsible { border-radius:8px; background:#fafafa; padding:8px; margin-bottom:10px; border:1px solid rgba(2,6,23,0.03) }
+.collapsible h4 { margin:0; cursor:pointer; font-size:14px; }
+.collapsible .content { margin-top:8px; max-height:240px; overflow:auto; padding-right:6px; }
+
+/* small helpers & buttons */
+.btn { padding:8px 12px; border-radius:8px; border:1px solid rgba(2,6,23,0.06); background:var(--card); cursor:pointer; }
+.btn.primary { background:var(--accent-gold); color:#fff; border:none; }
+.search-input{ width:100%; padding:8px; border-radius:8px; border:1px solid rgba(2,6,23,0.06) }
 
 /* responsive */
 @media (max-width:1100px){
-  .layout{grid-template-columns:1fr}
-  .kpi-row{justify-content:space-between;padding:0 8px}
-  .filter-toggle{left:12px;top:12px}
+  .main-grid { grid-template-columns: 1fr; }
+  .insights{ grid-template-columns: repeat(2,1fr); }
+  .kpi-row{ justify-content:center; }
 }
-
-/* small visual tweaks */
-.legend-item{display:flex;align-items:center;gap:8px}
-.legend-swatch{width:12px;height:12px;border-radius:4px}
-.centered {display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
-<div class="container" id="appRoot">
+<div class="container">
 
-  <!-- Filter button (popout modal) -->
-  <button class="btn filter-toggle" id="openFilters" title="Open filters">Filters</button>
-
-  <!-- Header -->
   <div class="header">
-    <div class="title">Voice of Customer — Google Reviews</div>
-    <div class="subtitle">Interactive Analytics Dashboard</div>
+    <div class="left-controls">
+      <button id="openFilters" class="filter-btn" title="Open Filters">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 5h18M6 12h12M10 19h4" stroke="#0b1220" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <b>Filters</b>
+      </button>
+    </div>
+
+    <div class="brand">
+      <div class="title">Voice of Customer — Google Reviews</div>
+      <div class="subtitle">Interactive Analytics Dashboard</div>
+    </div>
+
+    <div class="right-controls">
+      <button id="downloadCsvBtn" class="btn">Download CSV</button>
+    </div>
   </div>
 
-  <!-- KPI row -->
-  <div class="kpi-row" role="region" aria-label="KPIs">
-    <div class="kpi"><div class="label">Total Reviews</div><div class="val" id="kpiTotal">0</div></div>
-    <div class="kpi"><div class="label">% Negative Reviews</div><div class="val" id="kpiNegative">0%</div></div>
-    <div class="kpi"><div class="label">Best Store</div><div class="val" id="kpiBest">—</div></div>
-    <div class="kpi"><div class="label">Worst Store</div><div class="val" id="kpiWorst">—</div></div>
+  <div class="header-accent" aria-hidden="true"></div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="label">Total Reviews</div>
+      <div class="value" id="kpiTotal">0</div>
+    </div>
+    <div class="kpi">
+      <div class="label">% Negative Reviews</div>
+      <div class="value" id="kpiNegative">0%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Best Store</div>
+      <div class="value" id="kpiBest">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Lowest Rated Store</div>
+      <div class="value" id="kpiWorst">—</div>
+    </div>
   </div>
 
-  <!-- Controls (CSV only now) -->
-  <div class="controls">
-    <button id="downloadCsvBtn" class="btn">Download CSV</button>
-    <button id="resetFilters" class="btn">Reset Filters</button>
-  </div>
+  <!-- Strategic Insights heading -->
+  <h3 style="margin:18px 0 8px 0; color:#0b1220">Strategic Insights</h3>
+  <div id="insightsGrid" class="insights"></div>
 
-  <!-- Main layout (left: wide, right: narrow) -->
-  <div class="layout" id="mainLayout">
-    <!-- Left column -->
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <!-- Drivers -->
-      <div class="card drivers">
-        <h3 id="driversTitle">Key Drivers of Customer Feedback (All Sentiments)</h3>
+  <!-- Main content -->
+  <div class="main-grid" style="margin-top:14px;">
+    <div class="left-col">
+      <div class="card">
+        <h3>Key Drivers of Customer Feedback</h3>
         <div class="pills" id="driverPills"></div>
-        <div id="driversChart" style="flex:1;min-height:220px"></div>
+        <div id="driversChart" class="svg-chart"></div>
       </div>
 
-      <!-- Word cloud + trend -->
-      <div style="display:grid;grid-template-columns:1fr 1fr; gap:14px">
-        <div class="card">
-          <h3>Emotion Word Cloud</h3>
-          <div class="word-cloud" id="wordCloud"></div>
-        </div>
-        <div class="card">
-          <h3>Sentiment Trend Over Time (APR → MAR)</h3>
-          <div id="lineChart" style="height:220px"></div>
-        </div>
-      </div>
-
-      <!-- Heatmap -->
       <div class="card">
-        <h3>Store Sentiment Heatmap (Top 10 stores × Categories)</h3>
-        <div class="heatmap-wrap" id="heatmapWrap" style="margin-top:8px">
-          <table class="heatmap-table" id="heatmapTable"></table>
+        <h3>Emotion Word Cloud</h3>
+        <div class="word-cloud" id="wordCloud"></div>
+      </div>
+
+      <div class="card">
+        <h3>Store Sentiment Heatmap (Top stores × Categories)</h3>
+        <div id="heatmapWrap" class="heatmap-wrap" style="margin-top:8px">
+          <table id="heatmapTable" class="heatmap-table"></table>
         </div>
       </div>
 
-      <!-- Comments -->
       <div class="card">
-        <h3>Customer Comments</h3>
-        <div class="comments" style="margin-top:8px">
-          <div>
-            <h4 style="margin:0 0 8px 0;color:var(--text)">Positive Comments (Top 15)</h4>
-            <div id="positiveComments" style="max-height:260px;overflow:auto;padding-right:6px"></div>
-          </div>
-          <div>
-            <h4 style="margin:0 0 8px 0;color:var(--text)">Negative Comments (Top 15)</h4>
-            <div id="negativeComments" style="max-height:260px;overflow:auto;padding-right:6px"></div>
-          </div>
-        </div>
+        <h3>Positive Comments (Top 15) — By Date</h3>
+        <div id="positiveComments" class="comment-column"></div>
       </div>
     </div>
 
-    <!-- Right column -->
-    <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="right-col">
       <div class="card">
         <h3>Sentiment Distribution</h3>
-        <div style="display:flex;gap:12px;align-items:center">
-          <div id="pieChart" style="width:220px;height:220px"></div>
-          <div id="pieLegend" style="flex:1"></div>
-        </div>
+        <div id="pieChart" style="width:100%;height:220px;display:flex;align-items:center;justify-content:center"></div>
+        <div id="pieLegend" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h3>Sentiment Trend Over Time (APR → MAR)</h3>
+        <div id="lineChart" class="svg-chart"></div>
       </div>
 
       <div class="card">
         <h3>Sentiment by Zone</h3>
-        <div id="zoneChart" style="height:220px"></div>
+        <div id="zoneChart" class="svg-chart"></div>
       </div>
 
-      <div class="card" id="insightsCard">
-        <h3>Strategic Insights</h3>
-        <div id="insightsGrid" style="margin-top:8px;display:grid;grid-template-columns:1fr;gap:8px"></div>
+      <div class="card">
+        <h3>Negative Comments (Top 15) — By Date</h3>
+        <div id="negativeComments" class="comment-column"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Filter modal (popout) -->
-<div id="filterModalBackdrop" class="modal-backdrop" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h4 id="filterTitle">Filters</h4>
-      <div style="display:flex;gap:8px">
-        <button id="applyFilters" class="btn primary">Apply</button>
-        <button id="closeFilters" class="btn">Close</button>
+<!-- Drawer -->
+<div id="drawerBackdrop" class="drawer-backdrop">
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Filters drawer">
+    <div class="close"><button id="closeDrawer" class="btn">Close</button></div>
+
+    <div class="collapsible">
+      <h4 data-toggle="business">Business Name</h4>
+      <div class="content" id="businessNameWrap"></div>
+    </div>
+
+    <div class="collapsible">
+      <h4 data-toggle="zone">Zone</h4>
+      <div class="content" id="zoneWrap"></div>
+    </div>
+
+    <div class="collapsible">
+      <h4 data-toggle="state">State</h4>
+      <div class="content">
+        <input id="stateSearch" class="search-input" placeholder="Search state..." />
+        <div id="stateWrap" style="margin-top:8px"></div>
       </div>
     </div>
 
-    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div>
-        <div style="font-weight:700;margin-bottom:6px">Business Name</div>
-        <div id="businessNameWrap" style="max-height:160px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
-      </div>
-
-      <div>
-        <div style="font-weight:700;margin-bottom:6px">Zone</div>
-        <div id="zoneWrap" style="max-height:160px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
-      </div>
-
-      <div>
-        <div style="font-weight:700;margin-bottom:6px">State</div>
-        <input id="stateSearch" placeholder="Search state..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-bottom:8px"/>
-        <div id="stateWrap" style="max-height:220px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
-      </div>
-
-      <div>
-        <div style="font-weight:700;margin-bottom:6px">City / Store</div>
-        <input id="citySearch" placeholder="Search city..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-bottom:8px"/>
-        <div id="cityWrap" style="max-height:100px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04);margin-bottom:8px"></div>
-        <input id="storeSearch" placeholder="Search store..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-bottom:8px"/>
-        <div id="storeWrap" style="max-height:80px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
-      </div>
-
-      <div>
-        <div style="font-weight:700;margin-bottom:6px">Mall Type</div>
-        <div id="mallWrap" style="max-height:120px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
-
-        <div style="margin-top:10px;font-weight:700;margin-bottom:6px">Sentiment</div>
-        <div id="sentimentWrap" style="display:flex;gap:8px"></div>
-      </div>
-
-      <div>
-        <div style="font-weight:700;margin-bottom:6px">FY</div>
-        <div id="fyWrap" style="max-height:120px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
-        <div style="margin-top:10px;font-weight:700;margin-bottom:6px">Quarter</div>
-        <div id="quarterWrap" style="max-height:80px;overflow:auto;border-radius:6px;padding:6px;border:1px solid rgba(2,6,23,0.04)"></div>
-        <div style="margin-top:10px;font-weight:700;margin-bottom:6px">Month</div>
-        <div id="monthWrap" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div class="collapsible">
+      <h4 data-toggle="city">City</h4>
+      <div class="content">
+        <input id="citySearch" class="search-input" placeholder="Search city..." />
+        <div id="cityWrap" style="margin-top:8px"></div>
       </div>
     </div>
 
-  </div>
-</div>
-
-<!-- Drill-down modal -->
-<div id="drillModalBackdrop" class="modal-backdrop">
-  <div class="modal" id="drillModal" role="dialog" aria-modal="true">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h4 id="modalTitle">Store details</h4>
-      <button class="btn" id="closeDrill">Close</button>
+    <div class="collapsible">
+      <h4 data-toggle="store">Store</h4>
+      <div class="content">
+        <input id="storeSearch" class="search-input" placeholder="Search store..." />
+        <div id="storeWrap" style="margin-top:8px"></div>
+      </div>
     </div>
-    <div id="modalBody" style="margin-top:12px"></div>
+
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button id="applyFilters" class="btn primary">Apply Filters</button>
+      <button id="resetFilters" class="btn">Reset</button>
+    </div>
   </div>
 </div>
 
 <script>
-/* =========================
-   Config & URLs
-   ========================= */
-const API_URLS = [
-  "https://raw.githubusercontent.com/Harishbose/voc-dashboard/main/reviews.json"
-];
-
+/* ------------- Config ------------- */
+const API_URLS = ["https://raw.githubusercontent.com/Harishbose/voc-dashboard/main/reviews.json"];
 const MONTH_ORDER = ['APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC','JAN','FEB','MAR'];
-const SENTIMENT_COLORS = { Positive:'#10b981', Negative:'#ef4444', Neutral:'#f59e0b' };
+const SENTIMENT_COLORS = { Positive: '#10b981', Negative: '#ef4444', Neutral: '#f59e0b' };
 
 let state = {
-  rawData: [],
-  data: [],
-  filters: {
-    businessName: null,
-    zones: new Set(),
-    states: new Set(),
-    cities: new Set(),
-    stores: new Set(),
-    mallTypes: new Set(),
-    sentiments: new Set(),
-    fys: new Set(),
-    quarters: new Set(),
-    months: new Set()
-  },
+  rawData: [], data: [],
+  filters: { businessName:null, zones:new Set(), states:new Set(), cities:new Set(), stores:new Set() },
   derived: {}
 };
 
-/* =========================
-   Helpers
-   ========================= */
+/* ------------- Helpers ------------- */
 function escapeHtml(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function sentimentScore(sent){ if(sent==='Positive') return 1; if(sent==='Negative') return -1; return 0; }
-function looksLikeDate(s){ if(!s) return false; return /^\d{4}-\d{2}-\d{2}/.test(s) || /^\d{2}\/\d{2}\/\d{4}/.test(s); }
-function formatDateYMD(dateStr){ if(!dateStr) return 'N/A'; const d=new Date(dateStr); if(isNaN(d)) return dateStr; return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`; }
-
-/* small category classifier (kept as original) */
 function classifyImprovementCategory(text){
   if(!text) return 'Miscellaneous';
   const t = text.toLowerCase();
@@ -327,82 +282,64 @@ function classifyImprovementCategory(text){
   return 'Miscellaneous';
 }
 
-/* =========================
-   Data loading & normalization
-   ========================= */
+/* Normalize */
+function normalizeRecord(r){
+  const rec = {};
+  rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating))) ? Number(r.rating) : 0;
+  rec.storeCode = r.storeCode || r['storeCode'] || r['Store Name'] || r['store'] || '';
+  rec.mallType = r.mallType || r['mallType'] || '';
+  rec.businessName = r.businessName || r['Brand'] || '';
+  rec.zone = r.zone || '';
+  rec.state = r.state || '';
+  rec.city = r.city || '';
+  rec.commentDate = r.commentDate || r['commentDate'] || '';
+  rec.month = (r.month || r['month'] || '').toString().toUpperCase();
+  rec.quarter = r.quarter || '';
+  rec.fy = r.fy || '';
+  rec.sentiment = (r.sentiment || 'Neutral').toString();
+  let commentText = r.comment || r['comment'] || r.responseType || r['Customer Response'] || '';
+  rec.comment = commentText || '';
+  rec.__raw = r;
+  return rec;
+}
+
+/* Fetch */
 async function loadReviewData(){
   for(const url of API_URLS){
     try {
       const res = await fetch(url);
       if(!res.ok) continue;
       const data = await res.json();
-      if(Array.isArray(data) && data.length>0) return data;
-    } catch(err){}
+      if(Array.isArray(data)) return data;
+    } catch(e){}
   }
-  alert('Could not load data from backend. Check GitHub raw JSON.');
+  alert('Could not load data from backend (reviews.json).');
   return [];
 }
 
-function normalizeRecord(r){
-  const rec = {};
-  rec.rating = (r.rating !== undefined && r.rating !== null && !isNaN(Number(r.rating))) ? Number(r.rating) : (r['Google Rating'] ? Number(r['Google Rating']) : 0);
-  rec.storeCode = r.storeCode || r['storeCode'] || r['Store Name'] || r['store'] || '';
-  rec.mallType = r.mallType || r['mallType'] || r['Mall/HS'] || r['mall'] || '';
-  rec.businessName = r.businessName || r['businessName'] || r['Brand'] || r['brand'] || '';
-  rec.zone = r.zone || r['zone'] || '';
-  rec.state = r.state || r['state'] || '';
-  rec.city = r.city || r['city'] || '';
-  rec.commentDate = r.commentDate || r['commentDate'] || r['Comment Date'] || r['date'] || '';
-  rec.month = (r.month || r['month'] || '').toString().toUpperCase();
-  rec.quarter = r.quarter || r['quarter'] || '';
-  rec.fy = r.fy || r['fy'] || r['Financial Year'] || '';
-  rec.sentiment = (r.sentiment || r['sentiment'] || 'Neutral').toString();
-
-  // comment extraction: prefer comment/responseType/customer response; fix cases where comment stores a date string
-  let commentText = r.comment || r['comment'] || r['Customer Response'] || r.responseType || r['responseType'] || '';
-  // If the comment field looks like a date/time and responseType exists, use responseType
-  if(looksLikeDate(String(commentText)) && r.responseType && String(r.responseType).length > 2) commentText = r.responseType;
-  if(looksLikeDate(String(commentText)) && r['Customer Response'] && String(r['Customer Response']).length > 2) commentText = r['Customer Response'];
-  // fallback to responseType if comment is empty
-  if(!commentText && (r.responseType || r['responseType'])) commentText = r.responseType || r['responseType'];
-  rec.comment = commentText || '';
-  rec.__raw = r;
-  return rec;
-}
-
-/* =========================
-   Derived lists & filters
-   ========================= */
-function uniq(arr){ return Array.from(new Set(arr.map(x=>x===null? '': x))).filter(x=>x!=='' ); }
-
+/* Derived lists */
 function refreshDerivedLists(all){
-  state.derived.businessNames = uniq(all.map(r=>r.businessName)).sort();
-  state.derived.zones = uniq(all.map(r=>r.zone)).sort();
-  state.derived.states = uniq(all.map(r=>r.state)).sort();
-  state.derived.cities = uniq(all.map(r=>r.city)).sort();
-  state.derived.stores = uniq(all.map(r=>r.storeCode)).sort();
-  state.derived.mallTypes = uniq(all.map(r=>r.mallType)).sort();
-  state.derived.fys = uniq(all.map(r=>r.fy)).sort().reverse();
-  state.derived.quarters = uniq(all.map(r=>r.quarter)).sort();
-  state.derived.months = uniq(all.map(r=>r.month)).sort((a,b)=> MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
+  state.derived.businessNames = uniq(all.map(r=>r.businessName));
+  state.derived.zones = uniq(all.map(r=>r.zone));
+  state.derived.states = uniq(all.map(r=>r.state));
+  state.derived.cities = uniq(all.map(r=>r.city));
+  state.derived.stores = uniq(all.map(r=>r.storeCode));
 }
+function uniq(arr){ return Array.from(new Set(arr.filter(x=>x && x!==null))).sort(); }
 
+/* Cascade allowed - not strictly necessary but we'll use allowed lists */
 function cascadeAllowed(){
-  const base = state.rawData;
-  const f = state.filters;
-  const allowedStates = new Set();
-  const allowedCities = new Set();
-  const allowedStores = new Set();
-
-  base.forEach(r=>{ if(f.zones.size===0 || f.zones.has(r.zone)) allowedStates.add(r.state); });
-  base.forEach(r=>{ if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state))) allowedCities.add(r.city); });
-  base.forEach(r=>{ if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state)) && (f.cities.size===0 || f.cities.has(r.city))) allowedStores.add(r.storeCode); });
-
+  const base=state.rawData; const f=state.filters;
+  const allowedStates=new Set(), allowedCities=new Set(), allowedStores=new Set();
+  base.forEach(r=> { if(f.zones.size===0 || f.zones.has(r.zone)) allowedStates.add(r.state); });
+  base.forEach(r=> { if((f.zones.size===0 || f.zones.has(r.zone)) && (f.states.size===0 || f.states.has(r.state))) allowedCities.add(r.city); });
+  base.forEach(r=> { if((f.zones.size===0||f.zones.has(r.zone)) && (f.states.size===0||f.states.has(r.state)) && (f.cities.size===0||f.cities.has(r.city))) allowedStores.add(r.storeCode); });
   state.derived.allowedStates = Array.from(allowedStates).sort();
   state.derived.allowedCities = Array.from(allowedCities).sort();
   state.derived.allowedStores = Array.from(allowedStores).sort();
 }
 
+/* Apply filters */
 function applyFilters(){
   const f = state.filters;
   let data = state.rawData.slice();
@@ -411,108 +348,60 @@ function applyFilters(){
   if(f.states.size) data = data.filter(r=> f.states.has(r.state));
   if(f.cities.size) data = data.filter(r=> f.cities.has(r.city));
   if(f.stores.size) data = data.filter(r=> f.stores.has(r.storeCode));
-  if(f.mallTypes.size) data = data.filter(r=> f.mallTypes.has(r.mallType));
-  if(f.sentiments.size) data = data.filter(r=> f.sentiments.has(r.sentiment));
-  if(f.fys.size) data = data.filter(r=> f.fys.has(r.fy));
-  if(f.quarters.size) data = data.filter(r=> f.quarters.has(r.quarter));
-  if(f.months.size) data = data.filter(r=> f.months.has(r.month));
   state.data = data;
 }
 
-/* =========================
-   Render controls
-   ========================= */
+/* Render filter UI in the drawer */
 function renderFilterControls(){
   cascadeAllowed();
-
-  // Business name (radio)
+  // business names (radio)
   const bwrap = document.getElementById('businessNameWrap'); bwrap.innerHTML='';
   state.derived.businessNames.forEach(name=>{
-    const checked = (state.filters.businessName === name) ? 'checked' : '';
-    const div = document.createElement('div'); div.style.marginBottom='6px';
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="radio" name="businessName" ${checked} value="${escapeHtml(name)}"> <span>${escapeHtml(name)}</span></label>`;
+    const div = document.createElement('div');
+    const checked = state.filters.businessName === name ? 'checked' : '';
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="radio" name="businessName" ${checked} value="${escapeHtml(name)}"> ${escapeHtml(name)}</label>`;
     bwrap.appendChild(div);
   });
-
-  // zone
+  // zones
   const zwrap = document.getElementById('zoneWrap'); zwrap.innerHTML='';
   state.derived.zones.forEach(z=>{
     const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(z)}" class="zone-checkbox"/> ${escapeHtml(z)}</label>`;
+    const checked = state.filters.zones.has(z) ? 'checked' : '';
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(z)}" class="zone-checkbox" ${checked}/> ${escapeHtml(z)}</label>`;
     zwrap.appendChild(div);
   });
 
   // states
   const swrap = document.getElementById('stateWrap'); swrap.innerHTML='';
   (state.derived.allowedStates || state.derived.states).forEach(s=>{
+    const checked = state.filters.states.has(s) ? 'checked' : '';
     const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="state-checkbox"/> ${escapeHtml(s)}</label>`;
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="state-checkbox" ${checked}/> ${escapeHtml(s)}</label>`;
     swrap.appendChild(div);
   });
 
   // cities
   const cwrap = document.getElementById('cityWrap'); cwrap.innerHTML='';
   (state.derived.allowedCities || state.derived.cities).forEach(c=>{
+    const checked = state.filters.cities.has(c) ? 'checked' : '';
     const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(c)}" class="city-checkbox"/> ${escapeHtml(c)}</label>`;
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(c)}" class="city-checkbox" ${checked}/> ${escapeHtml(c)}</label>`;
     cwrap.appendChild(div);
   });
 
   // stores
   const stwrap = document.getElementById('storeWrap'); stwrap.innerHTML='';
   (state.derived.allowedStores || state.derived.stores).forEach(s=>{
+    const checked = state.filters.stores.has(s) ? 'checked' : '';
     const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="store-checkbox"/> ${escapeHtml(s)}</label>`;
+    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="store-checkbox" ${checked}/> ${escapeHtml(s)}</label>`;
     stwrap.appendChild(div);
-  });
-
-  // mall types
-  const mwrap = document.getElementById('mallWrap'); mwrap.innerHTML='';
-  state.derived.mallTypes.forEach(m=>{
-    const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(m)}" class="mall-checkbox"/> ${escapeHtml(m)}</label>`;
-    mwrap.appendChild(div);
-  });
-
-  // sentiment
-  const sentWrap = document.getElementById('sentimentWrap'); sentWrap.innerHTML='';
-  ['Positive','Neutral','Negative'].forEach(s=>{
-    const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(s)}" class="sent-checkbox"/> ${s}</label>`;
-    sentWrap.appendChild(div);
-  });
-
-  // fy
-  const fyw = document.getElementById('fyWrap'); fyw.innerHTML='';
-  state.derived.fys.forEach(fy=>{
-    const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(fy)}" class="fy-checkbox"/> ${escapeHtml(fy)}</label>`;
-    fyw.appendChild(div);
-  });
-
-  // quarters
-  const qw = document.getElementById('quarterWrap'); qw.innerHTML='';
-  state.derived.quarters.forEach(q=>{
-    const div = document.createElement('div');
-    div.innerHTML = `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-val="${escapeHtml(q)}" class="q-checkbox"/> ${escapeHtml(q)}</label>`;
-    qw.appendChild(div);
-  });
-
-  // months
-  const mw = document.getElementById('monthWrap'); mw.innerHTML='';
-  MONTH_ORDER.forEach(m=>{
-    if(state.derived.months.includes(m)){
-      const el = document.createElement('label');
-      el.style.display='inline-flex'; el.style.alignItems='center'; el.style.gap='6px';
-      el.innerHTML = `<input type="checkbox" class="m-checkbox" data-val="${escapeHtml(m)}"/> ${escapeHtml(m)}`;
-      mw.appendChild(el);
-    }
   });
 
   attachFilterListeners();
 }
 
-/* attach listeners for modal controls and filter inputs */
+/* attach filter listeners */
 function attachFilterListeners(){
   document.querySelectorAll('input[name="businessName"]').forEach(r=>{
     r.addEventListener('change', e=>{
@@ -524,66 +413,31 @@ function attachFilterListeners(){
     cb.addEventListener('change', e=>{
       const val = e.target.dataset.val;
       if(e.target.checked) state.filters.zones.add(val); else state.filters.zones.delete(val);
+      renderFilterControls();
     });
   });
-
   document.querySelectorAll('.state-checkbox').forEach(cb=>{
     cb.addEventListener('change', e=>{
       const val = e.target.dataset.val;
       if(e.target.checked) state.filters.states.add(val); else state.filters.states.delete(val);
+      renderFilterControls();
     });
   });
-
   document.querySelectorAll('.city-checkbox').forEach(cb=>{
     cb.addEventListener('change', e=>{
       const val = e.target.dataset.val;
       if(e.target.checked) state.filters.cities.add(val); else state.filters.cities.delete(val);
+      renderFilterControls();
     });
   });
-
   document.querySelectorAll('.store-checkbox').forEach(cb=>{
     cb.addEventListener('change', e=>{
       const val = e.target.dataset.val;
       if(e.target.checked) state.filters.stores.add(val); else state.filters.stores.delete(val);
+      renderFilterControls();
     });
   });
 
-  document.querySelectorAll('.mall-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.mallTypes.add(val); else state.filters.mallTypes.delete(val);
-    });
-  });
-
-  document.querySelectorAll('.sent-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.sentiments.add(val); else state.filters.sentiments.delete(val);
-    });
-  });
-
-  document.querySelectorAll('.fy-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.fys.add(val); else state.filters.fys.delete(val);
-    });
-  });
-
-  document.querySelectorAll('.q-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.quarters.add(val); else state.filters.quarters.delete(val);
-    });
-  });
-
-  document.querySelectorAll('.m-checkbox').forEach(cb=>{
-    cb.addEventListener('change', e=>{
-      const val = e.target.dataset.val;
-      if(e.target.checked) state.filters.months.add(val); else state.filters.months.delete(val);
-    });
-  });
-
-  // searches
   document.getElementById('stateSearch').addEventListener('input', e=>{
     const q = e.target.value.toLowerCase();
     document.querySelectorAll('#stateWrap > div').forEach(div=>{
@@ -596,7 +450,7 @@ function attachFilterListeners(){
       div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
     });
   });
-  document.getElementById('storeSearch').addEventListener('input', e=>{
+  document.getElementById('storeSearch')?.addEventListener('input', e=>{
     const q = e.target.value.toLowerCase();
     document.querySelectorAll('#storeWrap > div').forEach(div=>{
       div.style.display = div.textContent.toLowerCase().includes(q) ? '' : 'none';
@@ -604,70 +458,98 @@ function attachFilterListeners(){
   });
 }
 
-/* =========================
-   KPIs & Insights
-   ========================= */
+/* KPI and insights */
 function renderKPIsAndInsights(){
-  const data = state.data;
+  applyFilters();
+  const data = state.data || [];
   const total = data.length;
   const negatives = data.filter(d=>d.sentiment==='Negative').length;
   const negPct = total ? ((negatives/total)*100).toFixed(1) + '%' : '0%';
   document.getElementById('kpiTotal').textContent = total;
   document.getElementById('kpiNegative').textContent = negPct;
 
-  // Best & worst store logic:
-  // We use average rating AND review counts to avoid single-review anomalies.
-  // Weighted score = avg_rating * log(1 + review_count)
-  const byStore = {};
+  // Best/Worst store using weighted score
+  const storeMap = {};
   state.rawData.forEach(r=>{
-    if(!byStore[r.storeCode]) byStore[r.storeCode] = {sum:0,count:0};
-    byStore[r.storeCode].sum += Number(r.rating||0);
-    byStore[r.storeCode].count++;
+    if(!storeMap[r.storeCode]) storeMap[r.storeCode] = {sum:0,count:0};
+    storeMap[r.storeCode].sum += Number(r.rating||0);
+    storeMap[r.storeCode].count++;
   });
-  const storeStats = Object.entries(byStore).map(([k,v])=>({
-    store:k,
-    avg:v.count? v.sum/v.count : 0,
-    count:v.count,
-    weighted: (v.count? ( (v.sum/v.count) * Math.log(1 + v.count) ) : 0)
-  })).filter(s=>s.store).sort((a,b)=>b.weighted - a.weighted);
+  const storeScores = Object.entries(storeMap).map(([s,v])=>{
+    const avg = v.count ? (v.sum / v.count) : 0;
+    const weighted = avg * Math.log(1 + v.count);
+    return {store:s, avg, count:v.count, weighted};
+  }).filter(x=>x.store && x.store.trim() !== '');
 
-  // pick best (highest weighted) and worst (lowest avg but require at least 3 reviews)
-  const best = storeStats[0];
-  const worstCandidates = storeStats.filter(s=>s.count>=3).sort((a,b)=>a.avg-b.avg);
-  const worst = worstCandidates.length ? worstCandidates[0] : (storeStats.length ? storeStats[storeStats.length-1] : null);
-
-  document.getElementById('kpiBest').textContent = best ? `${best.store} (${best.avg.toFixed(2)} / ${best.count})` : '—';
-  document.getElementById('kpiWorst').textContent = worst ? `${worst.store} (${worst.avg.toFixed(2)} / ${worst.count})` : '—';
-
-  // Strategic insights (simple heuristics)
-  const insightsGrid = document.getElementById('insightsGrid'); insightsGrid.innerHTML='';
-  const categories = {};
-  data.forEach(r=>{
-    const c = classifyImprovementCategory(r.comment);
-    if(c!=='Miscellaneous') categories[c] = (categories[c]||0)+1;
-  });
-  const totalCats = Object.values(categories).reduce((a,b)=>a+b,0) || 1;
-  const sortedCats = Object.entries(categories).map(([k,v])=>({k,v,percent:Math.round(v/totalCats*100)})).sort((a,b)=>b.v-a.v);
-  if(sortedCats.length){
-    sortedCats.slice(0,4).forEach(s=>{
-      const el = document.createElement('div'); el.className='card'; el.style.padding='10px';
-      el.innerHTML = `<div style="font-weight:700;color:var(--text)">${escapeHtml(s.k)}</div><div style="color:var(--muted);font-size:13px">${s.v} mentions — ${s.percent}%</div>`;
-      insightsGrid.appendChild(el);
-    });
+  if(storeScores.length){
+    // choose best by highest weighted, worst by lowest weighted
+    const best = storeScores.slice().sort((a,b)=>b.weighted - a.weighted)[0];
+    const worst = storeScores.slice().sort((a,b)=>a.weighted - b.weighted)[0];
+    document.getElementById('kpiBest').textContent = best ? `${best.store} (${best.avg.toFixed(2)})` : '—';
+    document.getElementById('kpiWorst').textContent = worst ? `${worst.store} (${worst.avg.toFixed(2)})` : '—';
   } else {
-    const el = document.createElement('div'); el.className='card'; el.style.padding='10px';
-    el.innerHTML = `<div style="color:var(--muted)">No strategic insights for the active filters.</div>`;
-    insightsGrid.appendChild(el);
+    document.getElementById('kpiBest').textContent = '—';
+    document.getElementById('kpiWorst').textContent = '—';
   }
+
+  // Strategic Insights
+  const grid = document.getElementById('insightsGrid'); grid.innerHTML='';
+  const strategic = generateStrategicInsights(state.data);
+  strategic.forEach(s=>{
+    const el = document.createElement('div'); el.className='insight-card';
+    el.innerHTML = `<h4 style="margin-top:0">${escapeHtml(s.headline)}</h4><p style="color:var(--muted);">${escapeHtml(s.description)}</p>`;
+    grid.appendChild(el);
+  });
 }
 
-/* =========================
-   Drivers chart (horizontal bars)
-   ========================= */
-function renderDriversChart(){
-  const data = state.data;
+/* Generate strategic insights (heuristic) */
+function generateStrategicInsights(data){
+  data = data || [];
   const categories = {};
-  data.forEach(r=>{
+  data.forEach(r=>{ const cat = classifyImprovementCategory(r.comment); if(cat==='Miscellaneous') return; categories[cat] = (categories[cat]||0)+1; });
+  const total = Object.values(categories).reduce((a,b)=>a+b,0) || 1;
+  const sortedCats = Object.entries(categories).map(([k,v])=>({k,v,percent:(v/total*100)})).sort((a,b)=>b.v-a.v);
+  const theme = sortedCats[0] ? sortedCats[0].k : 'Store Experience';
+  const themePct = sortedCats[0] ? Math.round(sortedCats[0].percent) : 0;
+
+  // zone dip
+  const zoneStats = {};
+  data.forEach(r=>{ if(!zoneStats[r.zone]) zoneStats[r.zone] = {sum:0,count:0,neg:0}; zoneStats[r.zone].sum += r.rating; zoneStats[r.zone].count++; if(r.sentiment==='Negative') zoneStats[r.zone].neg++; });
+  const zoneArr = Object.entries(zoneStats).map(([z,v])=>({zone:z,avg:v.count? v.sum/v.count:0, negPct:v.count? (v.neg/v.count*100):0})).sort((a,b)=>b.negPct-a.negPct);
+  const topZone = zoneArr[0] || {zone:'N/A',avg:0,negPct:0};
+
+  // underperformers by avg <=4
+  const storeMap = {};
+  data.forEach(r=>{ if(!storeMap[r.storeCode]) storeMap[r.storeCode] = {sum:0,count:0,neg:0}; storeMap[r.storeCode].sum += r.rating; storeMap[r.storeCode].count++; if(r.sentiment==='Negative') storeMap[r.storeCode].neg++; });
+  const underperformers = Object.entries(storeMap).map(([s,v])=>({s,avg:v.sum/v.count, count:v.count, negPct:v.count? v.neg/v.count*100:0})).filter(x=>x.avg<=4).sort((a,b)=>a.avg-b.avg).slice(0,5).map(x=>x.s);
+  const underperformingText = underperformers.length ? underperformers.join(', ') : 'N/A';
+
+  // pos momentum
+  function daysAgo(d,n){ const D=new Date(d); D.setDate(D.getDate()-n); return D; }
+  const today = new Date();
+  const last30 = data.filter(r=> new Date(r.commentDate) >= daysAgo(today,30));
+  const prev30 = data.filter(r=> new Date(r.commentDate) < daysAgo(today,30) && new Date(r.commentDate) >= daysAgo(today,60));
+  const posLast = last30.filter(r=>r.sentiment==='Positive').length;
+  const posPrev = prev30.filter(r=>r.sentiment==='Positive').length;
+  const posPctChange = posPrev ? Math.round(((posLast-posPrev)/posPrev)*100) : (posLast? 100: 0);
+
+  const cityMap = {}; data.forEach(r=> cityMap[r.city] = (cityMap[r.city]||0)+1);
+  const topCities = Object.entries(cityMap).map(([c,v])=>({c,v})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>x.c).join(', ') || 'N/A';
+
+  return [
+    {headline:'Store Experience Dominates', description:`This was the most mentioned theme, appearing in ${themePct}% of customer feedback.`},
+    {headline:`${topZone.zone} Zone Sentiment Dip`, description:`Average rating ${topZone.avg.toFixed(1)}, driven by negative in-store experience.`},
+    {headline:'Stores needing Attention', description:`Stores with low average ratings: ${underperformingText}`},
+    {headline:'Uptick in Positive Feedback', description:`Positive reviews changed by ${posPctChange}% in last 30 days.`},
+    {headline:`Top Cities`, description:`High review volumes in ${topCities}.`},
+    {headline:'Best Performing Stores', description:`Best-performing stores identified using weighted score (avg × log(1+count)).`}
+  ];
+}
+
+/* Drivers chart (bar-like) */
+function renderDriversChart(){
+  const categories = {};
+  state.data.forEach(r=>{
     const cat = classifyImprovementCategory(r.comment);
     if(cat==='Miscellaneous') return;
     categories[cat] = (categories[cat]||0)+1;
@@ -685,41 +567,38 @@ function renderDriversChart(){
   // pills
   const pillWrap = document.getElementById('driverPills'); pillWrap.innerHTML='';
   filtered.forEach(item=>{
-    const pill = document.createElement('div'); pill.className='pill'; pill.style.padding='8px 12px'; pill.style.background='#f3f4f6'; pill.style.borderRadius='999px';
-    pill.textContent = `${item.k} (${item.v})`;
-    pill.addEventListener('click', ()=>{ /* optional category drill */ });
+    const pill = document.createElement('div'); pill.style.padding='8px 10px'; pill.style.borderRadius='999px'; pill.style.background='#f1f5f9';
+    pill.style.fontWeight='600'; pill.style.cursor='default'; pill.textContent = `${item.k} (${item.v})`;
     pillWrap.appendChild(pill);
   });
 
+  // svg bars
   const chart = document.getElementById('driversChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 760, height = Math.max(100, filtered.length*36);
+  const width = chart.clientWidth || 760, height = Math.max(80, filtered.length*36);
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS,'svg');
   svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   const max = Math.max(...filtered.map(f=>f.v),1);
   filtered.forEach((f,i)=>{
-    const y = i*36 + 8;
-    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x',12); label.setAttribute('y',y+15); label.setAttribute('font-size','12'); label.setAttribute('fill', '#2b2b2b'); label.textContent = f.k;
+    const barW = Math.round((f.v/max) * (width - 200));
+    const y = i*36 + 10;
+    const label = document.createElementNS(svgNS,'text'); label.setAttribute('x',12); label.setAttribute('y',y+16); label.setAttribute('font-size','12'); label.setAttribute('font-weight','700'); label.textContent = f.k;
     svg.appendChild(label);
-    const barW = Math.round((f.v/max) * (width - 220));
-    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',200); rect.setAttribute('y',y+2); rect.setAttribute('width',barW); rect.setAttribute('height',20); rect.setAttribute('rx',8); rect.setAttribute('fill','#f7e9d0');
+    const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',200); rect.setAttribute('y',y+2); rect.setAttribute('width',barW); rect.setAttribute('height',20); rect.setAttribute('rx',6); rect.setAttribute('fill','#c7e9ff');
     svg.appendChild(rect);
-    const valText = document.createElementNS(svgNS,'text'); valText.setAttribute('x',200 + barW + 8); valText.setAttribute('y', y+16); valText.setAttribute('font-size','12'); valText.setAttribute('fill','#2b2b2b'); valText.textContent = f.v;
+    const valText = document.createElementNS(svgNS,'text'); valText.setAttribute('x',200 + barW + 8); valText.setAttribute('y', y+16); valText.setAttribute('font-size','12'); valText.setAttribute('font-weight','700'); valText.textContent = f.v;
     svg.appendChild(valText);
   });
   chart.appendChild(svg);
 }
 
-/* =========================
-   Sentiment pie
-   ========================= */
+/* Sentiment pie */
 function renderSentimentPie(){
-  const data = state.data;
   const counts = {Positive:0, Neutral:0, Negative:0};
-  data.forEach(d=> { if(d.sentiment in counts) counts[d.sentiment]++; else counts.Neutral++; });
-  const total = counts.Positive + counts.Neutral + counts.Negative || 1;
+  state.data.forEach(d=> { if(d.sentiment in counts) counts[d.sentiment]++; else counts.Neutral++; });
+  const total = Math.max(1, counts.Positive + counts.Neutral + counts.Negative);
   const pie = document.getElementById('pieChart'); pie.innerHTML='';
-  const size = 220; const svgNS = 'http://www.w3.org/2000/svg'; const cx=size/2, cy=size/2, r=size/2-8;
+  const size = 180; const svgNS = 'http://www.w3.org/2000/svg'; const cx=size/2, cy=size/2, r=size/2-8;
   const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width',size); svg.setAttribute('height',size); svg.setAttribute('viewBox',`0 0 ${size} ${size}`);
   let start = -Math.PI/2;
   Object.entries(counts).forEach(([k,v])=>{
@@ -730,11 +609,8 @@ function renderSentimentPie(){
     const large = slice > Math.PI ? 1 : 0;
     const path = document.createElementNS(svgNS,'path');
     const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-    path.setAttribute('d', d);
-    path.setAttribute('fill', SENTIMENT_COLORS[k]);
+    path.setAttribute('d', d); path.setAttribute('fill', SENTIMENT_COLORS[k]);
     svg.appendChild(path);
-
-    // outside label: skip precise line-wrapping — we show legend on the right
     start = end;
   });
   pie.appendChild(svg);
@@ -742,65 +618,55 @@ function renderSentimentPie(){
   // legend
   const legend = document.getElementById('pieLegend'); legend.innerHTML='';
   Object.entries(counts).forEach(([k,v])=>{
-    const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='10px'; row.style.marginBottom='8px';
-    const sw = document.createElement('div'); sw.className='legend-swatch'; sw.style.background = SENTIMENT_COLORS[k];
-    const label = document.createElement('div'); label.innerHTML = `<strong style="color:var(--text)">${k}</strong> — ${(v/total*100).toFixed(1)}% (${v})`;
+    const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.marginBottom='6px';
+    const sw = document.createElement('div'); sw.style.width='12px'; sw.style.height='12px'; sw.style.borderRadius='4px'; sw.style.background=SENTIMENT_COLORS[k];
+    const label = document.createElement('div'); label.style.fontWeight='700'; label.textContent = `${k} — ${(v/total*100).toFixed(1)}% (${v})`;
     row.appendChild(sw); row.appendChild(label); legend.appendChild(row);
   });
 }
 
-/* =========================
-   Word cloud
-   ========================= */
-function detectEmotions(text){
-  if(!text) return [];
-  const t = text.toLowerCase();
-  const em = [];
-  if(/thank|thanks|gratef|appreciat|love|😊/.test(t)) em.push('Gratitude');
-  if(/angry|hate|annoy|furious|😠|mad|rage|terrible|awful|worst/.test(t)) em.push('Frustration');
-  if(/happy|great|excellent|pleased|satisfied/.test(t)) em.push('Satisfaction');
-  if(/disappointed|sad|upset|not happy|disappoint/.test(t)) em.push('Disappointment');
-  if(/confused|unclear|unsure/.test(t)) em.push('Confusion');
-  return em;
-}
-
+/* Word cloud */
 function renderWordCloud(){
-  const data = state.data;
   const emotionCounts = {};
-  data.forEach(r=> detectEmotions(r.comment).forEach(e => emotionCounts[e] = (emotionCounts[e]||0)+1));
+  state.data.forEach(r=>{
+    // simple heuristics from response text
+    const t = (r.comment || '').toLowerCase();
+    if(/thank|thanks|gratef|appreciat|love/.test(t)) emotionCounts['Gratitude'] = (emotionCounts['Gratitude']||0)+1;
+    if(/angry|hate|annoy|furious|mad|terrible|awful|worst/.test(t)) emotionCounts['Frustration'] = (emotionCounts['Frustration']||0)+1;
+    if(/happy|great|excellent|pleased|satisfied/.test(t)) emotionCounts['Satisfaction'] = (emotionCounts['Satisfaction']||0)+1;
+    if(/disappointed|sad|upset|not happy|disappoint/.test(t)) emotionCounts['Disappointment'] = (emotionCounts['Disappointment']||0)+1;
+    if(/confused|unclear|unsure/.test(t)) emotionCounts['Confusion'] = (emotionCounts['Confusion']||0)+1;
+  });
   const wc = document.getElementById('wordCloud'); wc.innerHTML='';
   const total = Object.values(emotionCounts).reduce((a,b)=>a+b,0) || 1;
   Object.entries(emotionCounts).sort((a,b)=>b[1]-a[1]).forEach(([word,count])=>{
     const el = document.createElement('div'); const size = 12 + Math.round((count/total)*22);
-    el.style.fontSize = size + 'px'; el.style.background='#fff'; el.style.padding='4px 8px'; el.style.borderRadius='6px';
-    el.textContent = word; wc.appendChild(el);
+    el.style.fontSize = size + 'px'; el.style.background='#e6ffef'; el.style.padding='6px 10px'; el.style.borderRadius='18px';
+    el.textContent = `${word} (${count})`.substring(0,30);
+    wc.appendChild(el);
   });
 }
 
-/* =========================
-   Line chart (APR->MAR)
-   ========================= */
+/* Line chart */
 function renderLineChart(){
   const map = {}; MONTH_ORDER.forEach(m=> map[m] = {sum:0,count:0});
   state.data.forEach(r=> { if(map[r.month]){ map[r.month].sum += sentimentScore(r.sentiment); map[r.month].count++; } });
   const points = MONTH_ORDER.map(m=> map[m].count ? map[m].sum/map[m].count : 0);
   const chart = document.getElementById('lineChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 520, height = 220, padding = 40;
+  const width = chart.clientWidth || 380, height = 220, padding = 40;
   const svgNS = 'http://www.w3.org/2000/svg'; const svg = document.createElementNS(svgNS,'svg');
   svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   const yScale = v => padding + ( (1 - (v+1)/2) * (height - padding*2));
   const xScale = i => padding + i * ((width - padding*2) / (MONTH_ORDER.length-1));
-  for(let i=0;i<=4;i++){ const y = padding + i*((height - padding*2)/4); const line = document.createElementNS(svgNS,'line'); line.setAttribute('x1',padding); line.setAttribute('x2',width-padding); line.setAttribute('y1',y); line.setAttribute('y2',y); line.setAttribute('stroke','rgba(2,6,23,0.05)'); svg.appendChild(line); }
+  for(let i=0;i<=4;i++){ const y = padding + i*((height - padding*2)/4); const line = document.createElementNS(svgNS,'line'); line.setAttribute('x1',padding); line.setAttribute('x2',width-padding); line.setAttribute('y1',y); line.setAttribute('y2',y); line.setAttribute('stroke','rgba(2,6,23,0.04)'); svg.appendChild(line); }
   MONTH_ORDER.forEach((m,i)=>{ const tx = document.createElementNS(svgNS,'text'); tx.setAttribute('x', xScale(i)); tx.setAttribute('y', height - 8); tx.setAttribute('font-size','10'); tx.setAttribute('text-anchor','middle'); tx.textContent = m; svg.appendChild(tx); });
   const pathD = points.map((p,i)=> `${i===0?'M':'L'} ${xScale(i)} ${yScale(p)}`).join(' ');
-  const path = document.createElementNS(svgNS,'path'); path.setAttribute('d', pathD); path.setAttribute('fill','none'); path.setAttribute('stroke','#2b2b2b'); path.setAttribute('stroke-width','2'); svg.appendChild(path);
-  points.forEach((p,i)=>{ const cx = xScale(i), cy = yScale(p); const circle = document.createElementNS(svgNS,'circle'); circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',4); circle.setAttribute('fill','#fff'); circle.setAttribute('stroke','#2b2b2b'); circle.setAttribute('stroke-width',2); svg.appendChild(circle); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', cx); label.setAttribute('y', cy - 8); label.setAttribute('font-size','10'); label.setAttribute('text-anchor','middle'); label.setAttribute('font-weight','700'); label.textContent = (p).toFixed(2); svg.appendChild(label); });
+  const path = document.createElementNS(svgNS,'path'); path.setAttribute('d', pathD); path.setAttribute('fill','none'); path.setAttribute('stroke','#0b1220'); path.setAttribute('stroke-width','2'); svg.appendChild(path);
+  points.forEach((p,i)=>{ const cx = xScale(i), cy = yScale(p); const circle = document.createElementNS(svgNS,'circle'); circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',4); circle.setAttribute('fill','#fff'); circle.setAttribute('stroke','#0b1220'); circle.setAttribute('stroke-width',2); svg.appendChild(circle); });
   chart.appendChild(svg);
 }
 
-/* =========================
-   Heatmap
-   ========================= */
+/* Heatmap */
 function renderHeatmap(){
   const storeCat = {};
   state.rawData.forEach(r=>{
@@ -811,22 +677,18 @@ function renderHeatmap(){
     storeCat[r.storeCode][cat].score += sentimentScore(r.sentiment);
     storeCat[r.storeCode][cat].count++;
   });
-
   const storeCounts = {};
   state.rawData.forEach(r=> storeCounts[r.storeCode] = (storeCounts[r.storeCode]||0)+1);
   const topStores = Object.entries(storeCounts).map(([s,c])=>({s,c})).sort((a,b)=>b.c-a.c).slice(0,10).map(x=>x.s);
   const categories = uniq([].concat(...Object.values(storeCat).map(s=>Object.keys(s))));
-
   const table = document.getElementById('heatmapTable'); table.innerHTML='';
   const thead = document.createElement('thead'); const trh = document.createElement('tr'); const th0 = document.createElement('th'); th0.textContent='Store / Category'; trh.appendChild(th0);
   categories.forEach(cat=>{ const th = document.createElement('th'); th.textContent = cat; trh.appendChild(th); });
   thead.appendChild(trh); table.appendChild(thead);
-
   const tbody = document.createElement('tbody');
   topStores.forEach(store=>{
     const tr = document.createElement('tr');
     const th = document.createElement('th'); th.textContent = store; th.style.cursor='pointer';
-    th.addEventListener('click', ()=> showStoreDrill(store));
     tr.appendChild(th);
     categories.forEach(cat=>{
       const td = document.createElement('td');
@@ -834,7 +696,7 @@ function renderHeatmap(){
       const avg = stat.count ? stat.score / stat.count : 0;
       const display = stat.count ? (avg.toFixed(2) + ' (' + stat.count + ')') : '-';
       td.textContent = display;
-      const bg = avg > 0 ? `rgba(16,185,129,${Math.min(0.9, Math.abs(avg))})` : avg < 0 ? `rgba(239,68,68,${Math.min(0.9, Math.abs(avg))})` : `rgba(245,158,11,0.12)`;
+      const bg = avg > 0 ? `rgba(16,185,129,${Math.min(0.85, Math.abs(avg))})` : avg < 0 ? `rgba(239,68,68,${Math.min(0.85, Math.abs(avg))})` : `rgba(245,158,11,0.08)`;
       td.style.background = bg;
       tr.appendChild(td);
     });
@@ -843,156 +705,38 @@ function renderHeatmap(){
   table.appendChild(tbody);
 }
 
-/* =========================
-   Zone chart
-   ========================= */
+/* Zone chart */
 function renderZoneChart(){
   const zoneMap = {};
-  state.data.forEach(r=>{
-    if(!zoneMap[r.zone]) zoneMap[r.zone] = {sum:0,count:0};
-    zoneMap[r.zone].sum += sentimentScore(r.sentiment);
-    zoneMap[r.zone].count++;
-  });
+  state.data.forEach(r=>{ if(!zoneMap[r.zone]) zoneMap[r.zone] = {sum:0,count:0}; zoneMap[r.zone].sum += sentimentScore(r.sentiment); zoneMap[r.zone].count++; });
   const arr = Object.entries(zoneMap).map(([z,v])=>({z,avg: v.count ? v.sum/v.count : 0, count:v.count})).sort((a,b)=>b.avg-a.avg);
   const chart = document.getElementById('zoneChart'); chart.innerHTML='';
-  const width = chart.clientWidth || 340; const height = 220; const padding = 30; const svgNS = 'http://www.w3.org/2000/svg';
+  const width = chart.clientWidth || 360; const height = 220; const padding = 30; const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS,'svg'); svg.setAttribute('width','100%'); svg.setAttribute('height',height); svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
-  arr.forEach((a,i)=>{ const bw = (width - padding*2) / Math.max(1,arr.length); const barH = ((a.avg + 1)/2) * (height - padding*2); const x = padding + i*bw + 6; const y = height - padding - barH; const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',Math.max(10,bw-12)); rect.setAttribute('height',barH); rect.setAttribute('rx',8); rect.setAttribute('fill', a.avg > 0 ? SENTIMENT_COLORS.Positive : (a.avg < 0 ? SENTIMENT_COLORS.Negative : SENTIMENT_COLORS.Neutral)); svg.appendChild(rect); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + (Math.max(10,bw-12))/2); label.setAttribute('y', height - 8); label.setAttribute('font-size','12'); label.setAttribute('text-anchor','middle'); label.textContent = a.z; svg.appendChild(label); const val = document.createElementNS(svgNS,'text'); val.setAttribute('x', x + (Math.max(10,bw-12))/2); val.setAttribute('y', y - 6); val.setAttribute('font-size','11'); val.setAttribute('text-anchor','middle'); val.setAttribute('font-weight','700'); val.textContent = a.avg.toFixed(2); svg.appendChild(val); });
+  arr.forEach((a,i)=>{ const bw = (width - padding*2) / Math.max(1,arr.length); const barH = ((a.avg + 1)/2) * (height - padding*2); const x = padding + i*bw + 6; const y = height - padding - barH; const rect = document.createElementNS(svgNS,'rect'); rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',Math.max(12,bw-18)); rect.setAttribute('height',barH); rect.setAttribute('rx',8); rect.setAttribute('fill', a.avg > 0 ? SENTIMENT_COLORS.Positive : (a.avg < 0 ? SENTIMENT_COLORS.Negative : SENTIMENT_COLORS.Neutral)); svg.appendChild(rect); const label = document.createElementNS(svgNS,'text'); label.setAttribute('x', x + (Math.max(12,bw-18))/2); label.setAttribute('y', height - 8); label.setAttribute('font-size','11'); label.setAttribute('text-anchor','middle'); label.textContent = a.z; svg.appendChild(label); });
   chart.appendChild(svg);
 }
 
-/* =========================
-   Comments rendering
-   ========================= */
+/* Comments rendering */
 function renderComments(){
-  // ensure comments use responseType fallback when needed
   const data = state.data.map(r=> ({...r, parsedDate: new Date(r.commentDate)})).sort((a,b)=> b.parsedDate - a.parsedDate);
-  data.forEach(r=>{
-    if(looksLikeDate(r.comment) && r.__raw && r.__raw.responseType && r.__raw.responseType.length>3) r.comment = r.__raw.responseType;
-    // fallback to responseType if comment is empty
-    if(!r.comment && r.__raw && (r.__raw.responseType || r.__raw['Customer Response'])) r.comment = r.__raw.responseType || r.__raw['Customer Response'] || '';
-  });
-
   const positives = data.filter(r=> r.sentiment==='Positive').slice(0,15);
   const negatives = data.filter(r=> r.sentiment==='Negative').slice(0,15);
-
   const posWrap = document.getElementById('positiveComments'); posWrap.innerHTML='';
   positives.forEach(r=>{
     const card = document.createElement('div'); card.className='comment-card';
-    card.innerHTML = `<div style="font-size:14px"><b>${escapeHtml(r.comment)}</b></div><div class="comment-meta">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
+    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😊</span><b>${escapeHtml(r.comment)}</b></div><div style="font-size:12px;color:var(--muted);margin-top:6px">Store: ${escapeHtml(r.storeCode)} | Date: ${escapeHtml(r.commentDate)}</div>`;
     posWrap.appendChild(card);
   });
-
   const negWrap = document.getElementById('negativeComments'); negWrap.innerHTML='';
   negatives.forEach(r=>{
     const card = document.createElement('div'); card.className='comment-card';
-    card.innerHTML = `<div style="font-size:14px"><b>${escapeHtml(r.comment)}</b></div><div class="comment-meta">Store: ${escapeHtml(r.storeCode)} | Date: ${formatDateYMD(r.commentDate)}</div>`;
+    card.innerHTML = `<div style="font-size:14px"><span style="margin-right:8px">😠</span><b>${escapeHtml(r.comment)}</b></div><div style="font-size:12px;color:var(--muted);margin-top:6px">Store: ${escapeHtml(r.storeCode)} | Date: ${escapeHtml(r.commentDate)}</div>`;
     negWrap.appendChild(card);
   });
 }
 
-/* =========================
-   Drilldown modal
-   ========================= */
-function showStoreDrill(storeCode){
-  const modal = document.getElementById('drillModalBackdrop');
-  const body = document.getElementById('modalBody');
-  const title = document.getElementById('modalTitle');
-  title.textContent = `Store: ${storeCode}`;
-  const rows = state.rawData.filter(r=> r.storeCode === storeCode);
-  if(rows.length === 0){
-    body.innerHTML = '<p>No data for this store.</p>';
-  } else {
-    const avgRating = (rows.reduce((s,r)=>s + Number(r.rating||0),0) / rows.length).toFixed(2);
-    const sentiments = {Positive:0,Neutral:0,Negative:0};
-    rows.forEach(r=> sentiments[r.sentiment] = (sentiments[r.sentiment]||0) + 1);
-    const topDrivers = {};
-    rows.forEach(r=> { const cat = classifyImprovementCategory(r.comment); topDrivers[cat] = (topDrivers[cat]||0)+1; });
-    const driverList = Object.entries(topDrivers).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>`${x[0]} (${x[1]})`).join(', ') || 'N/A';
-    const pos = rows.filter(r=> r.sentiment==='Positive').slice(0,5).map(r=>`• ${escapeHtml(r.comment || r.__raw.responseType || '')}`);
-    const neg = rows.filter(r=> r.sentiment==='Negative').slice(0,5).map(r=>`• ${escapeHtml(r.comment || r.__raw.responseType || '')}`);
-    const aiSummary = generateStoreSummary(storeCode, rows);
-
-    body.innerHTML = `
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div style="flex:1;min-width:260px">
-          <p><b>Average rating:</b> ${avgRating} (${rows.length} reviews)</p>
-          <p><b>Sentiment breakdown:</b> Positive ${sentiments.Positive || 0}, Neutral ${sentiments.Neutral || 0}, Negative ${sentiments.Negative || 0}</p>
-          <p><b>Top drivers:</b> ${driverList}</p>
-          <p style="margin-top:10px"><b>Summary:</b></p>
-          <div style="background:#fafafa;padding:10px;border-radius:6px">${escapeHtml(aiSummary)}</div>
-        </div>
-        <div style="width:320px;min-width:240px">
-          <p style="margin-bottom:6px"><b>Top Positive</b></p>
-          <div style="background:#fff;padding:8px;border-radius:6px;margin-bottom:8px">${pos.join('<br>') || 'N/A'}</div>
-          <p style="margin-bottom:6px"><b>Top Negative</b></p>
-          <div style="background:#fff;padding:8px;border-radius:6px">${neg.join('<br>') || 'N/A'}</div>
-        </div>
-      </div>
-      <div style="margin-top:12px"><button id="modalDownload" class="btn">Download store data CSV</button> <button id="modalCopy" class="btn">Copy summary</button></div>
-    `;
-    document.getElementById('modalDownload').addEventListener('click', ()=> downloadStoreCSV(storeCode));
-    document.getElementById('modalCopy').addEventListener('click', ()=>{ navigator.clipboard.writeText(aiSummary).then(()=> alert('Summary copied to clipboard')); });
-  }
-  modal.style.display='flex';
-}
-function closeDrill(){ document.getElementById('drillModalBackdrop').style.display='none'; }
-
-/* store summary */
-function generateStoreSummary(storeCode, rows){
-  const n = rows.length;
-  if(n === 0) return 'No reviews available for this store.';
-  const avg = (rows.reduce((s,r)=>s + Number(r.rating||0),0) / n).toFixed(2);
-  const pos = rows.filter(r=> r.sentiment==='Positive').length;
-  const neg = rows.filter(r=> r.sentiment==='Negative').length;
-  const neut = rows.filter(r=> r.sentiment==='Neutral').length;
-  const cats = {};
-  rows.forEach(r=> { const c = classifyImprovementCategory(r.comment); cats[c] = (cats[c]||0)+1; });
-  const topCats = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>`${x[0]} (${x[1]})`).join(', ');
-  const sampleNeg = rows.find(r=> r.sentiment==='Negative' && r.comment && r.comment.length>20);
-  const samplePos = rows.find(r=> r.sentiment==='Positive' && r.comment && r.comment.length>20);
-  let summary = `Store ${storeCode} has ${n} reviews with average rating ${avg}. Sentiment split: Positive ${pos}, Neutral ${neut}, Negative ${neg}. Key themes: ${topCats || 'N/A'}.`;
-  if(sampleNeg) summary += ` Example concern: "${sampleNeg.comment.substring(0,160)}${sampleNeg.comment.length>160?'...':''}"`;
-  else if(samplePos) summary += ` Example compliment: "${samplePos.comment.substring(0,160)}${samplePos.comment.length>160?'...':''}"`;
-  return summary;
-}
-
-/* =========================
-   CSV downloads
-   ========================= */
-function downloadFilteredCSV(){
-  if(!state.data.length){ alert('No data to download.'); return; }
-  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
-  const header = cols.join(',');
-  const lines = state.data.map(r => cols.map(c => {
-    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
-    return `"${v}"`;
-  }).join(','));
-  const csv = [header].concat(lines).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'voc_filtered.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-
-function downloadStoreCSV(store){
-  const rows = state.rawData.filter(r=> r.storeCode === store);
-  if(!rows.length) return alert('No data for store.');
-  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
-  const header = cols.join(',');
-  const lines = rows.map(r => cols.map(c => {
-    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
-    return `"${v}"`;
-  }).join(','));
-  const csv = [header].concat(lines).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `store_${store}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-
-/* =========================
-   Render everything
-   ========================= */
+/* Render everything */
 function renderEverything(){
   applyFilters();
   renderKPIsAndInsights();
@@ -1005,56 +749,60 @@ function renderEverything(){
   renderComments();
 }
 
-/* =========================
-   UI wiring & init
-   ========================= */
-document.getElementById('openFilters').addEventListener('click', ()=> {
-  document.getElementById('filterModalBackdrop').style.display = 'flex';
+/* CSV download */
+function downloadFilteredCSV(){
+  if(!state.data.length){ alert('No data to download.'); return; }
+  const cols = ['storeCode','businessName','zone','state','city','mallType','fy','quarter','month','rating','sentiment','commentDate','comment'];
+  const header = cols.join(',');
+  const lines = state.data.map(r => cols.map(c => {
+    const v = (r[c] === undefined || r[c] === null) ? '' : String(r[c]).replace(/"/g,'""');
+    return `"${v}"`;
+  }).join(','));
+  const csv = [header].concat(lines).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'voc_filtered.csv'; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* Drawer open/close */
+const drawerBackdrop = document.getElementById('drawerBackdrop');
+document.getElementById('openFilters').addEventListener('click', ()=> { drawerBackdrop.style.display='flex'; renderFilterControls(); });
+document.getElementById('closeDrawer').addEventListener('click', ()=> { drawerBackdrop.style.display='none'; });
+drawerBackdrop.addEventListener('click', (e)=> { if(e.target === drawerBackdrop) drawerBackdrop.style.display='none'; });
+
+/* collapsible toggles inside drawer */
+document.addEventListener('click', (e)=>{
+  const t = e.target;
+  if(t.matches('.collapsible h4') || t.closest('.collapsible h4')){
+    const head = t.matches('.collapsible h4') ? t : t.closest('.collapsible h4');
+    const content = head.nextElementSibling;
+    if(content) content.style.display = (content.style.display === 'none' || !content.style.display) ? 'block' : 'none';
+  }
 });
-document.getElementById('closeFilters').addEventListener('click', ()=> {
-  document.getElementById('filterModalBackdrop').style.display = 'none';
-});
-document.getElementById('applyFilters').addEventListener('click', ()=> {
-  document.getElementById('filterModalBackdrop').style.display = 'none';
-  renderEverything();
-});
-document.getElementById('resetFilters').addEventListener('click', ()=> {
-  state.filters = {
-    businessName: null,
-    zones: new Set(),
-    states: new Set(),
-    cities: new Set(),
-    stores: new Set(),
-    mallTypes: new Set(),
-    sentiments: new Set(),
-    fys: new Set(),
-    quarters: new Set(),
-    months: new Set()
-  };
+
+/* Wire apply/reset buttons */
+document.getElementById('applyFilters').addEventListener('click', ()=> { drawerBackdrop.style.display='none'; renderEverything(); });
+document.getElementById('resetFilters').addEventListener('click', ()=>{
+  state.filters = { businessName:null, zones:new Set(), states:new Set(), cities:new Set(), stores:new Set() };
   renderFilterControls();
   renderEverything();
 });
-document.getElementById('downloadCsvBtn').addEventListener('click', ()=> downloadFilteredCSV());
-document.getElementById('closeDrill').addEventListener('click', closeDrill);
-document.getElementById('drillModalBackdrop').addEventListener('click', (e)=> { if(e.target.id === 'drillModalBackdrop') closeDrill(); });
 
-/* init */
+/* Download CSV binding */
+document.getElementById('downloadCsvBtn').addEventListener('click', downloadFilteredCSV);
+
+/* Initialization */
 (async function init(){
   const raw = await loadReviewData();
   state.rawData = raw.map(r=> normalizeRecord(r));
+  // ensure months uppercase
+  state.rawData.forEach(r=> r.month = (r.month||'').toString().toUpperCase());
   refreshDerivedLists(state.rawData);
-
-  // default: if there are FYs, select most recent
-  const defaultFY = state.derived.fys[0] || null;
-  if(defaultFY) state.filters.fys.add(defaultFY);
-
-  // default: pick first business name if present
-  if(state.derived.businessNames.length) state.filters.businessName = state.derived.businessNames[0];
-
+  // no default filters to keep all visible
   renderFilterControls();
   renderEverything();
 })();
-
 </script>
 </body>
 </html>
